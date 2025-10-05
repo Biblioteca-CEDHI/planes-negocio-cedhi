@@ -1,29 +1,29 @@
 <?php
+
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-// ✅ INCLUIR AUTENTICACIÓN CENTRAL
-include_once "Accesos/auth_central.php";
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
-// ✅ VERIFICAR AUTENTICACIÓN (pero no redirigir inmediatamente - es la página pública)
-$estaAutenticado = validarAutenticacionCentral();
-$usuarioData = $estaAutenticado ? obtenerUsuarioCentral() : null;
-$rol = $estaAutenticado ? strtolower($usuarioData['rol']) : null;
-
-// ✅ INICIAR SESIÓN PARA COMPATIBILIDAD
+// ✅ INICIAR SESIÓN PRIMERO
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// ✅ ASIGNAR VARIABLES DE SESIÓN SI ESTÁ AUTENTICADO
-if ($estaAutenticado) {
-    $_SESSION['rol'] = $rol;
-    $_SESSION['id'] = $usuarioData['id'];
-    $_SESSION['email'] = $usuarioData['email'];
-    $_SESSION['nombre'] = $usuarioData['nombre'];
-    $_SESSION['apellido'] = $usuarioData['apellido'];
-}
+// ✅ INCLUIR AUTENTICACIÓN CENTRAL
+include_once "Accesos/auth_central.php";
+
+// ✅ VERIFICAR AUTENTICACIÓN
+$estaAutenticado = validarAutenticacionCentral();
+$usuarioData = $estaAutenticado ? obtenerUsuarioCentral() : null;
+$rol = $estaAutenticado ? strtolower($usuarioData['rol']) : null;
+
+// DEBUG: Verificar qué datos llegan
+//error_log("DEBUG - Usuario Data: " . print_r($usuarioData, true));
+//error_log("DEBUG - Session: " . print_r($_SESSION, true));
 
 // El resto del código igual...
 include_once('Conection/conexion.php');
@@ -46,11 +46,9 @@ $result = $conn->query($sql);
 // Consulta para obtener las 10 palabras más buscadas (solo las que tienen resultados)
 $sql_busquedas = "SELECT palabra, contador FROM PalabrasBuscadas ORDER BY contador DESC LIMIT 10";
 $result_busquedas = $conn->query($sql_busquedas);
-var_dump($_SESSION);
+
 $conn->close();
-
 ?>
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
