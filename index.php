@@ -19,8 +19,10 @@ if (session_status() === PHP_SESSION_NONE) {
 // ✅ ASIGNAR VARIABLES DE SESIÓN SI ESTÁ AUTENTICADO
 if ($estaAutenticado) {
     $_SESSION['rol'] = $rol;
-    $_SESSION['usuario_id'] = $usuarioData['id'];
-    $_SESSION['correo'] = $usuarioData['email'];
+    $_SESSION['id'] = $usuarioData['id'];
+    $_SESSION['email'] = $usuarioData['email'];
+    $_SESSION['nombre'] = $usuarioData['nombre'];
+    $_SESSION['apellido'] = $usuarioData['apellido'];
 }
 
 // El resto del código igual...
@@ -44,7 +46,7 @@ $result = $conn->query($sql);
 // Consulta para obtener las 10 palabras más buscadas (solo las que tienen resultados)
 $sql_busquedas = "SELECT palabra, contador FROM PalabrasBuscadas ORDER BY contador DESC LIMIT 10";
 $result_busquedas = $conn->query($sql_busquedas);
-//var_dump($_SESSION);
+var_dump($_SESSION);
 $conn->close();
 
 ?>
@@ -467,7 +469,7 @@ $conn->close();
                     </li>
                     <li class="nav-item">
                         <span class="nav-link text-warning">
-                            <i class="fas fa-user"></i> <?= htmlspecialchars($usuarioData['user_name'] ?? 'Usuario') ?>
+                            <i class="fas fa-user"></i> <?= htmlspecialchars($usuarioData['nombre'] ?? 'Usuario') ?>
                         </span>
                     </li>
                     <?php else: ?>
