@@ -15,7 +15,7 @@ function validarAutenticacionCentral() {
             $userData = (array) $decoded;
 
             // Reiniciar sesión anterior
-            session_unset();
+            //session_unset();
 
             $_SESSION['user_id']             = $userData['userId'] ?? null;
             $_SESSION['user_email_address']  = $userData['email'] ?? null;

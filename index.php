@@ -1,22 +1,11 @@
 <?php
 
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
-// ✅ INICIAR SESIÓN PRIMERO
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// ✅ INCLUIR AUTENTICACIÓN CENTRAL
 include_once "Accesos/auth_central.php";
 
-// ✅ VERIFICAR AUTENTICACIÓN
 $estaAutenticado = validarAutenticacionCentral();
 $usuarioData = $estaAutenticado ? obtenerUsuarioCentral() : null;
 $rol = $estaAutenticado ? strtolower($usuarioData['rol']) : null;
@@ -25,7 +14,6 @@ $rol = $estaAutenticado ? strtolower($usuarioData['rol']) : null;
 //error_log("DEBUG - Usuario Data: " . print_r($usuarioData, true));
 //error_log("DEBUG - Session: " . print_r($_SESSION, true));
 
-// El resto del código igual...
 include_once('Conection/conexion.php');
 
 $conn = new mysqli($servername, $username, $password, $dbname);
@@ -450,7 +438,6 @@ $conn->close();
                         <a class="nav-link" href="Buscar/ranking.php">Ranking</a>
                     </li>
                     
-                    <!-- ✅ MENÚS ADMINISTRATIVOS - SOLO SI ESTÁ AUTENTICADO Y TIENE ROL -->
                     <?php if ($estaAutenticado && ($rol == 'admin' || $rol == 'owner')): ?>
                     <li class="nav-item">
                         <a class="nav-link" href="Admin/gestionar_tesis.php">Gestionar Planes</a>
@@ -458,10 +445,9 @@ $conn->close();
                     <?php endif; ?>
                     
                     
-                    <!-- ✅ BOTÓN DE LOGIN/LOGOUT -->
                     <?php if ($estaAutenticado): ?>
                     <li class="nav-item">
-                        <a class="nav-link" href="http://localhost/BibliotecaCEDHI/">
+                        <a class="nav-link" href="http://localhost/BibliotecaCEDHI/index.php">
                             <i class="fas fa-home"></i> Sistema Central
                         </a>
                     </li>
@@ -470,23 +456,15 @@ $conn->close();
                             <i class="fas fa-user"></i> <?= htmlspecialchars($usuarioData['nombre'] ?? 'Usuario') ?>
                         </span>
                     </li>
-                    <?php else: ?>
-                    <li class="nav-item">
-                        <a class="nav-link" href="http://localhost/BibliotecaCEDHI/">
-                            <i class="fas fa-sign-in-alt"></i> Salir
-                        </a>
-                    </li>
                     <?php endif; ?>
                 </ul>
             </div>
         </div>
     </nav>
 
-    <!-- Hero Section -->
     <section class="hero-section">
         <div class="hero-overlay"></div>
         
-        <!-- Carousel de imágenes -->
         <div class="carousel">
             <img src="Imagenes/DJI_0036.jpg" class="active" />
             <img src="Imagenes/NVC_0303.jpg" />
@@ -506,12 +484,10 @@ $conn->close();
                     <button type="submit" class="search-button">
                         <i class="fas fa-search"></i> Buscar
                     </button>
-                    <!-- Contenedor de sugerencias -->
                     <div id="suggestions" class="suggestions-list"></div>
                 </form>
             </div>
 
-            <!-- Palabras más buscadas -->
             <?php if ($result_busquedas && $result_busquedas->num_rows > 0): ?>
             <div class="popular-searches">
                 <h3><i class="fas fa-fire"></i> Tendencias de búsqueda</h3>
@@ -528,18 +504,15 @@ $conn->close();
         </div>
     </section>
 
-    <!-- Footer -->
     <footer class="footer">
         <div class="container">
             <p>© <?= date('Y') ?> Repositorio de Planes de Negocios - Todos los derechos reservados</p>
         </div>
     </footer>
 
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
-        // Carousel automático
         let currentIndex = 0;
         const images = document.querySelectorAll('.carousel img');
         const totalImages = images.length;
@@ -552,7 +525,6 @@ $conn->close();
 
         setInterval(showNextImage, 5000);
         
-        // Efecto de escritura para el título
         const heroTitle = document.querySelector('.hero-title');
         const originalText = heroTitle.textContent;
         heroTitle.textContent = '';

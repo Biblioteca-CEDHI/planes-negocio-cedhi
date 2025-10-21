@@ -1,21 +1,14 @@
 <?php
-// Habilitar la visualización de errores durante el desarrollo (esto es útil para detectar problemas)
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-// Iniciar la sesión para poder obtener el rol del usuario y controlar acceso o mostrar menús según el tipo de usuario
 session_start();
 
-// Incluir el archivo de conexión a la base de datos
 include ('../Conection/conexion.php');
 
-// ------------------------- //
-// 1. Definir el ordenamiento //
-// ------------------------- //
-$order_by = "Fecha_publicacion DESC";  // Orden por defecto: más recientes primero
+$order_by = "Fecha_publicacion DESC";  
 
-// Si el usuario selecciona un orden distinto (pasado por URL con GET)
 if (isset($_GET['orden'])) {
     switch ($_GET['orden']) {
         case 'fecha_asc': $order_by = "Fecha_publicacion ASC"; break;
@@ -27,54 +20,31 @@ if (isset($_GET['orden'])) {
     }
 }
 
-// ------------------------- //
-// 2. Conexión a la base de datos //
-// ------------------------- //
 $conn = new mysqli($servername, $username, $password, $dbname);
 if ($conn->connect_error) {
     die("Conexión fallida: " . $conn->connect_error);
 }
 
-// ------------------------- //
-// 3. Filtro por carrera //
-// ------------------------- //
-// Si se ha pasado por GET un ID de carrera, se toma ese valor, si no, se asume "todas"
 $carrera_filtro = isset($_GET['carrera']) ? intval($_GET['carrera']) : 0;
 
-// ------------------------- //
-// 4. Construir la consulta principal //
-// ------------------------- //
 $sql = "SELECT t.*, c.Nombre AS NombreCarrera
         FROM Tesis t
         JOIN Carrera c ON t.Carrera_ID = c.ID";
 
-// Si el usuario seleccionó una carrera específica, se añade condición WHERE
 if ($carrera_filtro > 0) {
     $sql .= " WHERE t.Carrera_ID = $carrera_filtro";
 }
 
-// ------------------------- //
-// 5. Agregar el ordenamiento //
-// ------------------------- //
 $sql .= " ORDER BY $order_by";
 
-// ------------------------- //
-// 6. Ejecutar la consulta de tesis //
-// ------------------------- //
 $result = $conn->query($sql);
 if (!$result) {
     die("Error en la consulta SQL: " . $conn->error);
 }
 
-// ------------------------- //
-// 7. Obtener lista de carreras para el filtro //
-// ------------------------- //
 $sql_carreras = "SELECT ID, Nombre FROM Carrera ORDER BY Nombre";
 $result_carreras = $conn->query($sql_carreras);
 
-// ------------------------- //
-// 8. Obtener rol del usuario actual //
-// ------------------------- //
 $rol = isset($_SESSION['rol']) ? $_SESSION['rol'] : null;
 ?>
 <!DOCTYPE html>
@@ -83,7 +53,6 @@ $rol = isset($_SESSION['rol']) ? $_SESSION['rol'] : null;
     <meta charset="UTF-8" />
     <title>Repositorio de Planes de Negocios</title>
 
-    <!-- Ícono de la pestaña -->
     <link rel="icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQradELIH2EABbwe93oJ0s--V91loD8gTe0jg&s" type="image/png" />
 
     <!-- Configuración responsive para móviles -->
