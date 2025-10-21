@@ -8,22 +8,15 @@ function validarAutenticacionCentral() {
         session_start();
     }
 
-    // Si ya hay sesión activa con datos válidos
-    if (!empty($_SESSION['user_id'])) {
-        return true;
-    }
-
-    // Validar token si viene en GET
     if (!empty($_GET['token'])) {
         try {
             $key = 'cedhi2024biblio';
             $decoded = JWT::decode($_GET['token'], new Key($key, 'HS256'));
             $userData = (array) $decoded;
 
-            // 🔍 Log de depuración
-            //error_log("DEBUG - Token Data (decoded): " . print_r($userData, true));
+            // Reiniciar sesión anterior
+            session_unset();
 
-            // Guardar en sesión con los mismos nombres usados en generateToken()
             $_SESSION['user_id']             = $userData['userId'] ?? null;
             $_SESSION['user_email_address']  = $userData['email'] ?? null;
             $_SESSION['user_first_name']     = $userData['nombre'] ?? null;
@@ -32,12 +25,18 @@ function validarAutenticacionCentral() {
 
             return true;
         } catch (Exception $e) {
-            error_log("❌ AUTH_CENTRAL: Error JWT -> " . $e->getMessage());
+            error_log("AUTH_CENTRAL: Error JWT -> " . $e->getMessage());
+            return false;
         }
+    }
+
+    if (!empty($_SESSION['user_id'])) {
+        return true;
     }
 
     return false;
 }
+
 
 function obtenerUsuarioCentral() {
     if (!validarAutenticacionCentral()) {

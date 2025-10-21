@@ -46,7 +46,7 @@ $result = $conn->query($sql);
 // Consulta para obtener las 10 palabras más buscadas (solo las que tienen resultados)
 $sql_busquedas = "SELECT palabra, contador FROM PalabrasBuscadas ORDER BY contador DESC LIMIT 10";
 $result_busquedas = $conn->query($sql_busquedas);
-
+//var_dump($usuarioData);
 $conn->close();
 ?>
 <!DOCTYPE html>
