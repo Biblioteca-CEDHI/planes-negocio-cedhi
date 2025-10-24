@@ -1,76 +1,67 @@
 <?php
-// ✅ INCLUIR AUTENTICACIÓN CENTRAL CON RUTA CORRECTA
+// modificar_tesis.php
+
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+// --- Autenticación y session ---
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 include_once "../Accesos/auth_central.php";
 
-// ✅ VERIFICAR AUTENTICACIÓN CENTRAL Y REDIRIGIR INMEDIATAMENTE
 if (!validarAutenticacionCentral()) {
     header("Location: http://localhost/BibliotecaCEDHI/");
     exit();
 }
 
-// ✅ OBTENER DATOS DEL USUARIO
 $usuarioData = obtenerUsuarioCentral();
-$rol = $usuarioData['rol'];
+$rol = strtolower($usuarioData['rol']);
+$estaAutenticado = true;
 
-// ✅ VALIDACIÓN DE ACCESO: Solo 'Administrador' y 'Owner' pueden modificar tesis
+// Verificar permisos de administrador
 if ($rol !== 'admin' && $rol !== 'owner') {
     header("Location: http://localhost/BibliotecaCEDHI/?error=permisos");
     exit();
 }
 
-// ✅ INICIAR SESIÓN PARA COMPATIBILIDAD CON CÓDIGO EXISTENTE
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-$_SESSION['rol'] = $rol;
-$_SESSION['usuario_id'] = $usuarioData['id'];
-
-// ✅ INCLUIR CONEXIÓN A LA BASE DE DATOS
+// --- Conexión a BD ---
 include_once "../Conection/conexion.php";
 
-// ✅ CREAR CONEXIÓN A LA BASE DE DATOS
 $conn = new mysqli($servername, $username, $password, $dbname);
 
-// ✅ VERIFICAR CONEXIÓN
 if ($conn->connect_error) {
     die("Conexión fallida: " . $conn->connect_error);
 }
 
-// ✅ VERIFICAR SI EL ID DE LA TESIS FUE RECIBIDO POR GET
 if (isset($_GET['id'])) {
     $id = $_GET['id'];
 
-    // ✅ PREPARAR Y EJECUTAR CONSULTA PARA OBTENER LOS DATOS DE LA TESIS ESPECÍFICA
     $sql = "SELECT * FROM Tesis WHERE ID = ?";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $id);  // Protección contra inyección SQL
+    $stmt->bind_param("i", $id); 
     $stmt->execute();
     $result = $stmt->get_result();
 
-    // ✅ SI LA TESIS EXISTE, ALMACENAR SUS DATOS
     if ($result->num_rows > 0) {
         $tesis = $result->fetch_assoc();
     } else {
         die("Plan de negocio no encontrado.");
     }
 
-    // ✅ SI EL FORMULARIO FUE ENVIADO POR MÉTODO POST (ACTUALIZAR)
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        // Recoger los datos enviados por el formulario
         $titulo = $_POST['titulo'];
         $estado = $_POST['estado'];
         $resumen = $_POST['resumen'];
         $fecha_publicacion = $_POST['fecha_publicacion'];
         $carrera_id = $_POST['carrera_id'];
 
-        // ✅ PREPARAR LA CONSULTA PARA ACTUALIZAR LA TESIS
         $sql_update = "UPDATE Tesis SET Titulo = ?, Estado = ?, Resumen = ?, Fecha_publicacion = ?, Carrera_ID = ? WHERE ID = ?";
         $stmt_update = $conn->prepare($sql_update);
         $stmt_update->bind_param("ssssii", $titulo, $estado, $resumen, $fecha_publicacion, $carrera_id, $id);
 
-        // ✅ EJECUTAR LA ACTUALIZACIÓN
         if ($stmt_update->execute()) {
-            // ✅ REDIRIGIR AL LISTADO CON MENSAJE DE ÉXITO
             echo "<script>alert('Plan de negocio actualizado correctamente.'); window.location.href='gestionar_tesis.php';</script>";
             exit();
         } else {
@@ -86,175 +77,289 @@ if (isset($_GET['id'])) {
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Modificar Plan de Negocios</title>
-    <!-- Enlace a Bootstrap para diseño responsivo -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome para iconos -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Modificar Plan de Negocios - Panel de Administración</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
+    <!-- Los mismos recursos que index.php -->
+    <link rel="icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQradELIH2EABbwe93oJ0s--V91loD8gTe0jg&s" type="image/png">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Estilos centralizados -->
+    <link rel="stylesheet" href="../estilos.css">
+    
+    <!-- Estilos específicos para formulario de modificación -->
     <style>
-        .user-info {
-            background: #e9ecef;
-            padding: 10px 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
+        
+        .main-container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.05);
+            padding: 30px;
+            margin-bottom: 40px;
         }
-        .admin-badge {
-            background-color: #6a82fb;
+        
+        .admin-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             color: white;
-            padding: 3px 8px;
             border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .user-info {
+            background: var(--light-color);
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border-left: 4px solid var(--accent-color);
+        }
+        
+        .admin-badge {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
             font-size: 0.8rem;
             font-weight: bold;
         }
+        
         .owner-badge {
-            background-color: #ffc107;
-            color: #000;
-            padding: 3px 8px;
-            border-radius: 10px;
+            background-color: var(--accent-color);
+            color: var(--dark-color);
+            padding: 5px 12px;
+            border-radius: 15px;
             font-size: 0.8rem;
             font-weight: bold;
         }
+        
+        .form-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .form-label {
+            font-weight: 600;
+            color: var(--dark-color);
+            margin-bottom: 8px;
+        }
+        
+        .form-control, .form-select {
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            padding: 12px 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.25rem rgba(106, 27, 154, 0.25);
+        }
+        
         .current-file {
-            background: #f8f9fa;
-            padding: 10px;
-            border-radius: 5px;
-            border-left: 4px solid #6a82fb;
+            background: var(--light-color);
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-color);
+            margin-bottom: 25px;
+        }
+        
+        .info-card {
+            background: var(--light-color);
+            border-radius: 8px;
+            border-left: 4px solid var(--primary-color);
+            margin-bottom: 25px;
+        }
+        
+        .btn-submit {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border: none;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(106, 27, 154, 0.3);
+        }
+        
+        .btn-cancel {
+            background: #6c757d;
+            border: none;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-cancel:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+        
+        .btn-delete {
+            background: #dc3545;
+            border: none;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-delete:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+        }
+        
+        .required-field::after {
+            content: " *";
+            color: #dc3545;
+        }
+        
+        .form-section {
+            background: var(--light-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border-left: 4px solid var(--accent-color);
+        }
+        
+        .form-section-title {
+            color: var(--primary-color);
+            font-weight: 600;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+        
+        @media (max-width: 768px) {
+            .form-container {
+                padding: 0 15px;
+            }
+            
+            .btn-group {
+                width: 100%;
+            }
+            
+            .btn-submit, .btn-cancel, .btn-delete {
+                width: 100%;
+                margin-bottom: 10px;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- Incluimos el navbar -->
+    <?php include_once '../navbar.php'; ?>
 
-<div class="container mt-4">
-    <!-- ✅ INFORMACIÓN DEL USUARIO -->
-    <div class="user-info">
-        <h4 class="mb-2">
-            <i class="fas fa-edit"></i> Modificar Plan de Negocio
-            <?php if ($rol === 'owner'): ?>
-                <span class="owner-badge ms-2">OWNER</span>
-            <?php else: ?>
-                <span class="admin-badge ms-2">ADMINISTRADOR</span>
-            <?php endif; ?>
-        </h4>
-        <p class="mb-0">Usuario: <strong><?= htmlspecialchars($usuarioData['nombre'] . ' ' . $usuarioData['apellido']) ?></strong> | Editando: <strong><?= htmlspecialchars($tesis['Titulo']) ?></strong></p>
-    </div>
-
-    <h2 class="mb-4">Modificar Plan de Negocio</h2>
-
-    <!-- Botón para volver a la gestión de tesis -->
-    <div class="mb-4">
-        <a href="gestionar_tesis.php" class="btn btn-success">
-            <i class="fas fa-arrow-left"></i> Volver a Gestionar Planes
-        </a>
-    </div>
-
-    <!-- ✅ INFORMACIÓN DEL ARCHIVO ACTUAL -->
-    <?php if (!empty($tesis['Archivo_pdf'])): ?>
-    <div class="current-file mb-4">
-        <h5><i class="fas fa-file-pdf"></i> Archivo Actual</h5>
-        <p class="mb-1"><strong>Archivo PDF:</strong> <?= htmlspecialchars($tesis['Archivo_pdf']) ?></p>
-        <a href="../Archivos/<?= htmlspecialchars($tesis['Archivo_pdf']) ?>" target="_blank" class="btn btn-outline-primary btn-sm">
-            <i class="fas fa-eye"></i> Ver Archivo Actual
-        </a>
-        <small class="text-muted d-block mt-1">Nota: Para cambiar el archivo PDF, debe eliminar y volver a crear el plan.</small>
-    </div>
-    <?php endif; ?>
-
-    <!-- Formulario para editar los campos de la tesis -->
-    <form action="modificar_tesis.php?id=<?= $tesis['ID'] ?>" method="POST">
-        <!-- Campo para el título -->
-        <div class="mb-3">
-            <label for="titulo" class="form-label">
-                <i class="fas fa-heading"></i> Título del Plan
-            </label>
-            <input type="text" class="form-control" id="titulo" name="titulo" 
-                   value="<?= htmlspecialchars($tesis['Titulo']) ?>" required
-                   placeholder="Ingrese el título del plan de negocio">
-        </div>
-
-        <!-- Selector de estado -->
-        <div class="mb-3">
-            <label for="estado" class="form-label">
-                <i class="fas fa-chart-line"></i> Estado
-            </label>
-            <select class="form-control" id="estado" name="estado" required>
-                <option value="En proceso" <?= $tesis['Estado'] == 'En proceso' ? 'selected' : '' ?>>En proceso</option>
-                <option value="Finalizada" <?= $tesis['Estado'] == 'Finalizada' ? 'selected' : '' ?>>Finalizada</option>
-                <option value="Aprobada" <?= $tesis['Estado'] == 'Aprobada' ? 'selected' : '' ?>>Aprobada</option>
-                <option value="En revisión" <?= $tesis['Estado'] == 'En revisión' ? 'selected' : '' ?>>En revisión</option>
-            </select>
-        </div>
-
-        <!-- Campo para el resumen -->
-        <div class="mb-3">
-            <label for="resumen" class="form-label">
-                <i class="fas fa-file-alt"></i> Resumen Ejecutivo
-            </label>
-            <textarea class="form-control" id="resumen" name="resumen" rows="5"
-                      placeholder="Describa brevemente el plan de negocio..."><?= htmlspecialchars($tesis['Resumen']) ?></textarea>
-        </div>
-
-        <!-- Campo para el año de publicación -->
-        <div class="mb-3">
-            <label for="fecha_publicacion" class="form-label">
-                <i class="fas fa-calendar-alt"></i> Año de Publicación
-            </label>
-            <input type="number" class="form-control" id="fecha_publicacion" name="fecha_publicacion" 
-                   value="<?= $tesis['Fecha_publicacion'] ?>" min="2000" max="<?= date('Y') ?>" required>
-        </div>
-
-        <!-- Selector de carrera -->
-        <div class="mb-3">
-            <label for="carrera_id" class="form-label">
-                <i class="fas fa-graduation-cap"></i> Carrera
-            </label>
-            <select class="form-control" id="carrera_id" name="carrera_id" required>
-                <?php
-                // Consultar todas las carreras disponibles para mostrarlas en el selector
-                $sql_carreras = "SELECT * FROM Carrera ORDER BY Nombre";
-                $result_carreras = $conn->query($sql_carreras);
-                while ($row_carrera = $result_carreras->fetch_assoc()) {
-                    $selected = ($row_carrera['ID'] == $tesis['Carrera_ID']) ? 'selected' : '';
-                    echo "<option value='" . $row_carrera['ID'] . "' $selected>" . htmlspecialchars($row_carrera['Nombre']) . "</option>";
-                }
-                ?>
-            </select>
-        </div>
-
-        <!-- Información de auditoría -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <i class="fas fa-info-circle"></i> Información del Plan
-            </div>
-            <div class="card-body">
-                <p class="mb-1"><strong>ID:</strong> <?= $tesis['ID'] ?></p>
-                <p class="mb-1"><strong>Autor:</strong> <?= htmlspecialchars($tesis['Autor'] ?? 'No especificado') ?></p>
-                <p class="mb-0"><strong>Última modificación:</strong> <?= date('d/m/Y H:i:s') ?></p>
+    <div class="container main-container">
+        <div class="col-md-12 text-end">
+            <div class="btn-group">
+                <a href="gestionar_tesis.php" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left"></i> Volver a Gestión
+                </a>
             </div>
         </div>
+        <div class="form-container">
+            <form action="modificar_tesis.php?id=<?= $tesis['ID'] ?>" method="POST">
+                
+                <div class="form-section">
+                    <h4 class="form-section-title">
+                        <i class="fas fa-info-circle"></i> Información Básica
+                    </h4>
+                    
+                    <div class="mb-4">
+                        <label for="titulo" class="form-label required-field">
+                            <i class="fas fa-heading"></i> Título del Plan
+                        </label>
+                        <input type="text" class="form-control" id="titulo" name="titulo" 
+                               value="<?= htmlspecialchars($tesis['Titulo']) ?>" required
+                               placeholder="Ingrese el título completo del plan de negocio">
+                    </div>
 
-        <!-- Botones de acción -->
-        <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-primary btn-lg">
-                <i class="fas fa-save"></i> Guardar Cambios
-            </button>
-            <a href="gestionar_tesis.php" class="btn btn-secondary btn-lg">
-                <i class="fas fa-times"></i> Cancelar
-            </a>
-            <a href="eliminar_tesis.php?id=<?= $tesis['ID'] ?>" class="btn btn-danger btn-lg" 
-               onclick="return confirm('¿Está seguro de eliminar este plan de negocio? Esta acción no se puede deshacer.');">
-                <i class="fas fa-trash"></i> Eliminar
-            </a>
+                    <div class="mb-4">
+                        <label for="resumen" class="form-label required-field">
+                            <i class="fas fa-file-alt"></i> Resumen Ejecutivo
+                        </label>
+                        <textarea class="form-control" id="resumen" name="resumen" rows="5" required
+                                  placeholder="Describa brevemente el plan de negocio, objetivos principales, mercado objetivo, etc..."><?= htmlspecialchars($tesis['Resumen']) ?></textarea>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h4 class="form-section-title">
+                        <i class="fas fa-cog"></i> Detalles del Plan
+                    </h4>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <label for="estado" class="form-label required-field">
+                                <i class="fas fa-chart-line"></i> Estado del Plan
+                            </label>
+                            <select class="form-select" id="estado" name="estado" required>
+                                <option value="En proceso" <?= $tesis['Estado'] == 'En proceso' ? 'selected' : '' ?>>En proceso</option>
+                                <option value="Finalizada" <?= $tesis['Estado'] == 'Finalizada' ? 'selected' : '' ?>>Finalizada</option>
+                                <option value="Aprobada" <?= $tesis['Estado'] == 'Aprobada' ? 'selected' : '' ?>>Aprobada</option>
+                                <option value="En revisión" <?= $tesis['Estado'] == 'En revisión' ? 'selected' : '' ?>>En revisión</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 mb-4">
+                            <label for="fecha_publicacion" class="form-label required-field">
+                                <i class="fas fa-calendar-alt"></i> Año de Publicación
+                            </label>
+                            <input type="number" class="form-control" id="fecha_publicacion" name="fecha_publicacion" 
+                                   value="<?= $tesis['Fecha_publicacion'] ?>" min="2000" max="<?= date('Y') ?>" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="carrera_id" class="form-label required-field">
+                            <i class="fas fa-graduation-cap"></i> Carrera
+                        </label>
+                        <select class="form-select" id="carrera_id" name="carrera_id" required>
+                            <?php
+                            $sql_carreras = "SELECT * FROM Carrera ORDER BY Nombre";
+                            $result_carreras = $conn->query($sql_carreras);
+                            while ($row_carrera = $result_carreras->fetch_assoc()) {
+                                $selected = ($row_carrera['ID'] == $tesis['Carrera_ID']) ? 'selected' : '';
+                                echo "<option value='" . $row_carrera['ID'] . "' $selected>" . htmlspecialchars($row_carrera['Nombre']) . "</option>";
+                            }
+                            ?>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                    <a href="gestionar_tesis.php" class="btn btn-cancel me-md-2">
+                        <i class="fas fa-times"></i> Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-submit">
+                        <i class="fas fa-save"></i> Guardar Cambios
+                    </button>
+                </div>
+            </form>
         </div>
-    </form>
-</div>
+    </div>
 
-<!-- Scripts de Bootstrap para la funcionalidad de componentes -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>© <?= date('Y') ?> Repositorio de Planes de Negocios - Panel de Administración</p>
+        </div>
+    </footer>
+
+    <!-- Cerrar conexión -->
+    <?php $conn->close(); ?>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-
-<?php
-// Cerrar la conexión a la base de datos
-$conn->close();
-?>

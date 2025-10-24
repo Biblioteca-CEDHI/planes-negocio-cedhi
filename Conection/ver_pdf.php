@@ -12,9 +12,8 @@ if ($conn->connect_error) {
 if (isset($_GET['id']) && is_numeric($_GET['id'])) {
     $id = (int)$_GET['id'];
 
-    // Incrementar el contador
     $sql = "UPDATE Tesis SET Visualizaciones = Visualizaciones + 1 WHERE ID = ?";
-    $stmt = $conn->prepare($sql);  // USAR $conn en lugar de $conexion
+    $stmt = $conn->prepare($sql);
     if (!$stmt) {
         die("Error en prepare: " . $conn->error);
     }
@@ -23,7 +22,6 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
         die("Error en execute: " . $stmt->error);
     }
 
-    // Obtener la ruta del PDF
     $sql = "SELECT Archivo_pdf FROM Tesis WHERE ID = ?";
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
@@ -37,7 +35,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
     $stmt->fetch();
     $stmt->close();
 
-    $base_dir = __DIR__ . "/../Archivos/"; // ajusta según dónde estén los PDFs
+    $base_dir = __DIR__ . "/../Archivos/";
     $rutaCompleta = $base_dir . $ruta;
 
 

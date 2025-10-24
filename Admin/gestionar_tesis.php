@@ -1,221 +1,923 @@
 <?php
-// ✅ INCLUIR AUTENTICACIÓN CENTRAL CON RUTA CORRECTA
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 include_once "../Accesos/auth_central.php";
 
-// ✅ VERIFICAR AUTENTICACIÓN CENTRAL Y REDIRIGIR INMEDIATAMENTE
 if (!validarAutenticacionCentral()) {
     header("Location: http://localhost/BibliotecaCEDHI/");
     exit();
 }
 
-// ✅ OBTENER DATOS DEL USUARIO
 $usuarioData = obtenerUsuarioCentral();
-$rol = $usuarioData['rol'];
+$rol = strtolower($usuarioData['rol']);
+$estaAutenticado = true;
 
-// ✅ VALIDACIÓN DE ACCESO: Solo 'Administrador' y 'Owner' pueden gestionar tesis
 if ($rol !== 'admin' && $rol !== 'owner') {
     header("Location: http://localhost/BibliotecaCEDHI/?error=permisos");
     exit();
 }
 
-// ✅ INICIAR SESIÓN PARA COMPATIBILIDAD CON CÓDIGO EXISTENTE
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-$_SESSION['rol'] = $rol;
-$_SESSION['usuario_id'] = $usuarioData['id'];
-
-// ✅ INCLUIR CONEXIÓN A LA BASE DE DATOS
 include_once "../Conection/conexion.php";
 
-// ✅ CREAR CONEXIÓN A LA BASE DE DATOS
 $conn = new mysqli($servername, $username, $password, $dbname);
 
-// ✅ VERIFICAR CONEXIÓN
 if ($conn->connect_error) {
     die("Conexión fallida: " . $conn->connect_error);
 }
 
-/*----------------------------------------------------------
-| Consulta para obtener todas las tesis y su carrera asociada
------------------------------------------------------------*/
+$filtro_busqueda = isset($_GET['busqueda']) ? $conn->real_escape_string($_GET['busqueda']) : '';
+$filtro_estado = isset($_GET['estado']) ? $conn->real_escape_string($_GET['estado']) : '';
+$filtro_carrera = isset($_GET['carrera']) ? $conn->real_escape_string($_GET['carrera']) : '';
+$orden = isset($_GET['orden']) ? $conn->real_escape_string($_GET['orden']) : 'id_desc';
+
 $sql = "SELECT t.*, c.Nombre AS NombreCarrera
         FROM Tesis t
         JOIN Carrera c ON t.Carrera_ID = c.ID
-        ORDER BY t.ID DESC";  // Orden descendente para mostrar primero las más recientes
+        WHERE 1=1";
 
-$result = $conn->query($sql);
+$params = [];
+$types = '';
 
-// Si hubo error al hacer la consulta SQL
+if (!empty($filtro_busqueda)) {
+    $sql .= " AND (t.Titulo LIKE ? OR t.Resumen LIKE ? OR t.ID LIKE ?)";
+    $params[] = "%$filtro_busqueda%";
+    $params[] = "%$filtro_busqueda%";
+    $params[] = "%$filtro_busqueda%";
+    $types .= 'sss';
+}
+
+if (!empty($filtro_estado)) {
+    $sql .= " AND t.Estado = ?";
+    $params[] = $filtro_estado;
+    $types .= 's';
+}
+
+if (!empty($filtro_carrera)) {
+    $sql .= " AND c.ID = ?";
+    $params[] = $filtro_carrera;
+    $types .= 'i';
+}
+
+switch ($orden) {
+    case 'titulo_asc':
+        $sql .= " ORDER BY t.Titulo ASC";
+        break;
+    case 'titulo_desc':
+        $sql .= " ORDER BY t.Titulo DESC";
+        break;
+    case 'fecha_asc':
+        $sql .= " ORDER BY t.Fecha_publicacion ASC";
+        break;
+    case 'fecha_desc':
+        $sql .= " ORDER BY t.Fecha_publicacion DESC";
+        break;
+    case 'vistas_desc':
+        $sql .= " ORDER BY t.Visualizaciones DESC";
+        break;
+    case 'id_asc':
+        $sql .= " ORDER BY t.ID ASC";
+        break;
+    default:
+        $sql .= " ORDER BY t.ID DESC";
+        break;
+}
+
+$stmt = $conn->prepare($sql);
+
+if (!empty($params)) {
+    $stmt->bind_param($types, ...$params);
+}
+
+$stmt->execute();
+$result = $stmt->get_result();
+
 if (!$result) {
     die("Error en la consulta SQL: " . $conn->error);
 }
+
+$sql_carreras = "SELECT ID, Nombre FROM Carrera ORDER BY Nombre";
+$result_carreras = $conn->query($sql_carreras);
+
+$total_resultados = $result->num_rows;
 ?>
 
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Gestionar Plan de Negocios</title>
-    <!-- Incluimos Bootstrap para estilos -->
+    <title>Gestionar Planes de Negocios - Panel de Administración</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <link rel="icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQradELIH2EABbwe93oJ0s--V91loD8gTe0jg&s" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome para iconos -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- Estilos personalizados -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="../estilos.css">
+    
     <style>
-        body { padding: 20px; background: #f4f4f4; }
-        .table thead { background: #6a82fb; color: white; }
+        .main-container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.05);
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+        
         .user-info {
-            background: #e9ecef;
-            padding: 10px 15px;
-            border-radius: 5px;
+            background: var(--light-color);
+            padding: 12px 18px;
+            border-radius: 8px;
             margin-bottom: 20px;
+            border-left: 4px solid var(--accent-color);
         }
-        .admin-badge {
-            background-color: #6a82fb;
+        
+        .filters-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .filter-group {
+            margin-bottom: 15px;
+        }
+        
+        .filter-label {
+            font-weight: 600;
+            color: var(--dark-color);
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .table-container {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border: 1px solid #dee2e6;
+        }
+        
+        .table thead {
+            background: var(--dark-color);
             color: white;
-            padding: 3px 8px;
-            border-radius: 10px;
-            font-size: 0.8rem;
-            font-weight: bold;
         }
-        .owner-badge {
-            background-color: #ffc107;
-            color: #000;
-            padding: 3px 8px;
-            border-radius: 10px;
+        
+        .table th {
+            border: none;
+            padding: 10px 8px;
+            font-weight: 600;
+            white-space: nowrap;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 0.85rem;
+        }
+        
+        .table td {
+            padding: 8px;
+            vertical-align: middle;
+            border-color: #eee;
+            text-align: center;
+            font-size: 0.82rem;
+        }
+        
+        .table tbody tr:hover {
+            background-color: rgba(106, 27, 154, 0.03);
+        }
+        
+        .btn-admin {
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-view {
+            background: white;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+        
+        .btn-view:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-edit {
+            background: white;
+            border: 1px solid var(--secondary-color);
+            color: var(--secondary-color);
+        }
+        
+        .btn-edit:hover {
+            background: var(--secondary-color);
+            color: white;
+        }
+        
+        .btn-delete {
+            background: white;
+            border: 1px solid #dc3545;
+            color: #dc3545;
+        }
+        
+        .btn-delete:hover {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-details {
+            background: white;
+            border: 1px solid #6c757d;
+            color: #6c757d;
+            font-size: 0.7rem;
+            padding: 3px 6px;
+        }
+        
+        .btn-details:hover {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-filter {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            font-size: 0.85rem;
+        }
+        
+        .btn-filter:hover {
+            background: var(--secondary-color);
+            color: white;
+        }
+        
+        .btn-clear {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            font-size: 0.85rem;
+        }
+        
+        .btn-clear:hover {
+            background: #5a6268;
+            color: white;
+        }
+        
+        .badge-status {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            display: inline-block;
+        }
+        
+        .resumen-preview {
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: pointer;
+            display: inline-block;
+            text-align: left;
             font-size: 0.8rem;
-            font-weight: bold;
+            line-height: 1.3;
+        }
+        
+        .palabras-clave-container {
+            max-width: 130px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 3px;
+        }
+        
+        .keyword-badge {
+            background-color: #e9ecef;
+            color: #495057;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 0.65rem;
+            display: inline-block;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 4px;
+            flex-wrap: nowrap;
+            justify-content: center;
+        }
+        
+        /* Tabla optimizada */
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+        }
+        
+        .table {
+            width: 100%;
+            min-width: 1100px;
+            margin: 0;
+        }
+        
+        /* Ajustes de columnas específicas - más compactas */
+        .table th.col-id,
+        .table td.col-id {
+            width: 50px;
+            text-align: center;
+        }
+        
+        .table th.col-titulo,
+        .table td.col-titulo {
+            width: 180px;
+            min-width: 130px;
+            text-align: left;
+        }
+        
+        .table th.col-estado,
+        .table td.col-estado {
+            width: 90px;
+            text-align: center;
+        }
+        
+        .table th.col-resumen,
+        .table td.col-resumen {
+            width: 180px;
+            min-width: 130px;
+            text-align: left;
+        }
+        
+        .table th.col-fecha,
+        .table td.col-fecha {
+            width: 90px;
+            text-align: center;
+        }
+        
+        .table th.col-pdf,
+        .table td.col-pdf {
+            width: 70px;
+            text-align: center;
+        }
+        
+        .table th.col-carrera,
+        .table td.col-carrera {
+            width: 100px;
+            text-align: center;
+        }
+        
+        .table th.col-palabras,
+        .table td.col-palabras {
+            width: 130px;
+            min-width: 100px;
+            text-align: center;
+        }
+        
+        .table th.col-acciones,
+        .table td.col-acciones {
+            width: 100px;
+            text-align: center;
+        }
+
+        /* Contenido centrado específico */
+        .centered-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+        
+        .text-left {
+            text-align: left !important;
+        }
+        
+        .text-center {
+            text-align: center !important;
+        }
+
+        /* Títulos más compactos */
+        .titulo-compacto {
+            font-size: 0.85rem;
+            line-height: 1.2;
+            margin: 0;
+            max-width: 170px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .carrera-compacta {
+            font-size: 0.8rem;
+            max-width: 90px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: inline-block;
+        }
+
+        /* Modal personalizado */
+        .modal-content {
+            border-radius: 10px;
+            border: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .modal-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: 10px 10px 0 0;
+            border-bottom: none;
+            padding: 15px 20px;
+        }
+        
+        .results-info {
+            background: #e7f3ff;
+            border-left: 4px solid var(--primary-color);
+            padding: 10px 15px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+        
+        .active-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .filter-badge {
+            background: var(--primary-color);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        /* Modal personalizado */
+        .modal-content {
+            border-radius: 10px;
+            border: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .modal-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: 10px 10px 0 0;
+            border-bottom: none;
+            padding: 15px 20px;
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        .detail-item {
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .detail-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            color: var(--dark-color);
+            margin-bottom: 4px;
+            font-size: 0.9rem;
+        }
+        
+        .detail-value {
+            color: #555;
+            line-height: 1.4;
+            font-size: 0.9rem;
+        }
+        
+        .resumen-completo {
+            max-height: 150px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 5px;
+            border-left: 4px solid var(--accent-color);
+            font-size: 0.9rem;
+        }
+
+        .btn-tiny {
+            font-size: 0.90rem; 
+        }
+
+        @media (max-width: 768px) {
+            .filters-card {
+                padding: 15px;
+            }
+            
+            .filter-buttons {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .btn-filter, .btn-clear {
+                width: 100%;
+            }
         }
     </style>
 </head>
 <body>
+    <?php include_once '../navbar.php'; ?>
+    <div class="container main-container">
 
-<div class="container">
-    <!-- ✅ INFORMACIÓN DEL USUARIO -->
-    <div class="user-info">
-        <h4 class="mb-2">
-            <i class="fas fa-user-shield"></i> Panel de Administración
-            <?php if ($rol === 'owner'): ?>
-                <span class="owner-badge ms-2">OWNER</span>
-            <?php else: ?>
-                <span class="admin-badge ms-2">ADMINISTRADOR</span>
-            <?php endif; ?>
-        </h4>
-        <p class="mb-0">Usuario: <strong><?= htmlspecialchars($usuarioData['nombre'] . ' ' . $usuarioData['apellido']) ?></strong></p>
-    </div>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h4 mb-0">
+                <i class="fas fa-book-open"></i> Gestión de Planes de Negocios
+            </h2>
+            <span class="badge bg-primary fw-normal" style="background-color: #6a1b9a !important;">
+                <?= $total_resultados ?> plan(es) encontrado(s)
+            </span>
+        </div>
 
-    <h2 class="mb-4">Gestión de Plan de Negocios</h2>
-
-    <!-- Botones para navegación -->
-    <div class="d-flex justify-content-between mb-3">
-        <a href="../index.php" class="btn btn-success">
-            <i class="fas fa-home"></i> Volver a INICIO
-        </a>
-        <a href="ingresar_tesis.php" class="btn btn-success">
-            <i class="fas fa-plus"></i> Ingresar Nuevo Plan de Negocios
-        </a>
-    </div>
-
-    <p><strong>Las tesis están ordenadas del más reciente al más antiguo.</strong></p>
-
-    <!-- Tabla de tesis -->
-    <table class="table table-bordered table-striped">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Título</th>
-                <th>Estado</th>
-                <th>Resumen</th>
-                <th>Fecha Publicación</th>
-                <th>Archivo PDF</th>
-                <th>Carrera</th>
-                <th>Palabras Clave</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php if ($result && $result->num_rows > 0): ?>
-                <?php while ($row = $result->fetch_assoc()): ?>
-                    <?php
-                    // Obtener las palabras clave asociadas a la tesis actual
-                    $tesis_id = $row['ID'];
-
-                    // Consulta para obtener las palabras clave de la tesis
-                    $sql_palabras = "SELECT Palabra FROM PalabraClave
-                                     JOIN TesisPalabraClave ON PalabraClave.ID = TesisPalabraClave.PalabraClave_ID
-                                     WHERE TesisPalabraClave.Tesis_ID = ?";
-                    $stmt_palabras = $conn->prepare($sql_palabras);
-                    $stmt_palabras->bind_param("i", $tesis_id);
-                    $stmt_palabras->execute();
-                    $result_palabras = $stmt_palabras->get_result();
-
-                    // Guardar todas las palabras clave en un array
-                    $palabras_clave = [];
-                    while ($row_palabra = $result_palabras->fetch_assoc()) {
-                        $palabras_clave[] = $row_palabra['Palabra'];
-                    }
-
-                    // Convertir el array de palabras clave a un string separado por comas
-                    $lista_palabras = implode(", ", $palabras_clave);
-                    ?>
-
-                    <!-- Fila de la tabla para cada tesis -->
-                    <tr>
-                        <td><?= $row['ID'] ?></td>
-                        <td><?= htmlspecialchars($row['Titulo']) ?></td>
-                        <td>
-                            <span class="badge 
-                                <?= $row['Estado'] == 'Aprobado' ? 'bg-success' : 
-                                   ($row['Estado'] == 'Pendiente' ? 'bg-warning' : 'bg-secondary') ?>">
-                                <?= htmlspecialchars($row['Estado']) ?>
-                            </span>
-                        </td>
-                        <td><?= nl2br(htmlspecialchars($row['Resumen'])) ?></td>
-                        <td><?= $row['Fecha_publicacion'] ?></td>
-                        <td>
-                            <?php if (!empty($row['Archivo_pdf'])): ?>
-                                <!-- Enlace al PDF -->
-                                <a href="../Archivos/<?= htmlspecialchars($row['Archivo_pdf']) ?>" target="_blank" class="btn btn-outline-primary btn-sm">
-                                    <i class="fas fa-file-pdf"></i> Ver PDF
+        <!-- Panel de Filtros -->
+        <div class="filters-card">
+            <form method="GET" action="" id="filtersForm">
+                <div class="row">
+                    <div class="col-md-4 filter-group">
+                        <div class="filter-label">
+                            <i class="fas fa-search"></i> Buscar
+                        </div>
+                        <input type="text" 
+                               name="busqueda" 
+                               class="form-control form-control-sm" 
+                               placeholder="Buscar por título, resumen o ID..."
+                               value="<?= htmlspecialchars($filtro_busqueda) ?>">
+                    </div>
+                    
+                    <div class="col-md-2 filter-group">
+                        <div class="filter-label">
+                            <i class="fas fa-filter"></i> Estado
+                        </div>
+                        <select name="estado" class="form-select form-select-sm">
+                            <option value="">Todos los estados</option>
+                            <option value="Aprobada" <?= $filtro_estado == 'Aprobada' ? 'selected' : '' ?>>Aprobada</option>
+                            <option value="Finalizada" <?= $filtro_estado == 'Finalizada' ? 'selected' : '' ?>>Finalizada</option>
+                            <option value="En proceso" <?= $filtro_estado == 'En proceso' ? 'selected' : '' ?>>En proceso</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3 filter-group">
+                        <div class="filter-label">
+                            <i class="fas fa-graduation-cap"></i> Carrera
+                        </div>
+                        <select name="carrera" class="form-select form-select-sm">
+                            <option value="">Todas las carreras</option>
+                            <?php while ($carrera = $result_carreras->fetch_assoc()): ?>
+                                <option value="<?= $carrera['ID'] ?>" 
+                                    <?= $filtro_carrera == $carrera['ID'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($carrera['Nombre']) ?>
+                                </option>
+                            <?php endwhile; ?>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3 filter-group">
+                        <div class="filter-label">
+                            <i class="fas fa-sort"></i> Ordenar por
+                        </div>
+                        <select name="orden" class="form-select form-select-sm">
+                            <option value="id_desc" <?= $orden == 'id_desc' ? 'selected' : '' ?>>Más recientes primero</option>
+                            <option value="id_asc" <?= $orden == 'id_asc' ? 'selected' : '' ?>>Más antiguos primero</option>
+                            <option value="titulo_asc" <?= $orden == 'titulo_asc' ? 'selected' : '' ?>>Título (A-Z)</option>
+                            <option value="titulo_desc" <?= $orden == 'titulo_desc' ? 'selected' : '' ?>>Título (Z-A)</option>
+                            <option value="fecha_desc" <?= $orden == 'fecha_desc' ? 'selected' : '' ?>>Fecha (más reciente)</option>
+                            <option value="fecha_asc" <?= $orden == 'fecha_asc' ? 'selected' : '' ?>>Fecha (más antigua)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="filter-buttons d-flex justify-content-between"> 
+                            
+                            <div> 
+                                <button type="submit" class="btn btn-filter">
+                                    <i class="fas fa-filter"></i> Aplicar Filtros
+                                </button>
+                                <a href="?" class="btn btn-clear">
+                                    <i class="fas fa-times"></i> Limpiar Filtros
                                 </a>
-                            <?php else: ?>
-                                <span class="text-muted">No disponible</span>
-                            <?php endif; ?>
-                        </td>
-                        <td><?= htmlspecialchars($row['NombreCarrera']) ?></td>
-                        <td><?= htmlspecialchars($lista_palabras) ?></td>
-                        <td>
-                            <!-- Botones para modificar o eliminar la tesis -->
-                            <a href="modificar_tesis.php?id=<?= $row['ID'] ?>" class="btn btn-primary btn-sm">
-                                <i class="fas fa-edit"></i> Modificar
-                            </a>
-                            <a href="eliminar_tesis.php?id=<?= $row['ID'] ?>" class="btn btn-danger btn-sm" onclick="return confirm('¿Está seguro de eliminar esta tesis?');">
-                                <i class="fas fa-trash"></i> Eliminar
-                            </a>
-                        </td>
-                    </tr>
-                <?php endwhile; ?>
-            <?php else: ?>
-                <!-- Mensaje si no hay tesis registradas -->
-                <tr>
-                    <td colspan="9" class="text-center py-4">
-                        <i class="fas fa-inbox fa-2x text-muted mb-2"></i><br>
-                        No hay planes de negocio registrados.
-                    </td>
-                </tr>
-            <?php endif; ?>
-        </tbody>
-    </table>
-</div>
+                            </div>
 
-<!-- Incluimos Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+                            <a href="ingresar_tesis.php" class="btn btn-success btn-tiny">
+                                <i class="fas fa-plus"></i> Nuevo Plan
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <?php if (!empty($filtro_busqueda) || !empty($filtro_estado) || !empty($filtro_carrera)): ?>
+                <div class="results-info mt-3">
+                    <strong>Filtros activos:</strong>
+                    <div class="active-filters">
+                        <?php if (!empty($filtro_busqueda)): ?>
+                            <span class="filter-badge">
+                                Búsqueda: "<?= htmlspecialchars($filtro_busqueda) ?>"
+                                <a href="?<?= http_build_query(array_merge($_GET, ['busqueda' => ''])) ?>" class="text-white">
+                                    <i class="fas fa-times"></i>
+                                </a>
+                            </span>
+                        <?php endif; ?>
+                        <?php if (!empty($filtro_estado)): ?>
+                            <span class="filter-badge">
+                                Estado: <?= htmlspecialchars($filtro_estado) ?>
+                                <a href="?<?= http_build_query(array_merge($_GET, ['estado' => ''])) ?>" class="text-white">
+                                    <i class="fas fa-times"></i>
+                                </a>
+                            </span>
+                        <?php endif; ?>
+                        <?php if (!empty($filtro_carrera)): ?>
+                            <span class="filter-badge">
+                                <?php 
+                                $result_carreras->data_seek(0);
+                                $carrera_nombre = '';
+                                while ($carrera = $result_carreras->fetch_assoc()) {
+                                    if ($carrera['ID'] == $filtro_carrera) {
+                                        $carrera_nombre = $carrera['Nombre'];
+                                        break;
+                                    }
+                                }
+                                ?>
+                                Carrera: <?= htmlspecialchars($carrera_nombre) ?>
+                                <a href="?<?= http_build_query(array_merge($_GET, ['carrera' => ''])) ?>" class="text-white">
+                                    <i class="fas fa-times"></i>
+                                </a>
+                            </span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+            </form>
+        </div>
+
+        <div class="table-container">
+            <div class="table-wrapper">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th class="col-id text-center">ID</th>
+                            <th class="col-titulo text-left">Título</th>
+                            <th class="col-estado text-center">Estado</th>
+                            <th class="col-resumen text-left">Resumen</th>
+                            <th class="col-fecha text-center">Fecha</th>
+                            <th class="col-pdf text-center">PDF</th>
+                            <th class="col-carrera text-center">Carrera</th>
+                            <th class="col-palabras text-center">Palabras Clave</th>
+                            <th class="col-acciones text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if ($result && $total_resultados > 0): ?>
+                            <?php while ($row = $result->fetch_assoc()): ?>
+                                <?php
+                                $tesis_id = $row['ID'];
+
+                                $sql_palabras = "SELECT Palabra FROM PalabraClave
+                                                 JOIN TesisPalabraClave ON PalabraClave.ID = TesisPalabraClave.PalabraClave_ID
+                                                 WHERE TesisPalabraClave.Tesis_ID = ?";
+                                $stmt_palabras = $conn->prepare($sql_palabras);
+                                $stmt_palabras->bind_param("i", $tesis_id);
+                                $stmt_palabras->execute();
+                                $result_palabras = $stmt_palabras->get_result();
+
+                                $palabras_clave = [];
+                                while ($row_palabra = $result_palabras->fetch_assoc()) {
+                                    $palabras_clave[] = $row_palabra['Palabra'];
+                                }
+                                $stmt_palabras->close();
+                                ?>
+
+                                <tr>
+                                    <td class="col-id text-center">
+                                        <div class="centered-content">
+                                            <strong><?= $row['ID'] ?></strong>
+                                        </div>
+                                    </td>
+                                    <td class="col-titulo text-left">
+                                        <div class="titulo-compacto" title="<?= htmlspecialchars($row['Titulo']) ?>">
+                                            <?= htmlspecialchars($row['Titulo']) ?>
+                                        </div>
+                                    </td>
+                                    <td class="col-estado text-center">
+                                        <div class="centered-content">
+                                            <span class="badge-status 
+                                                <?= $row['Estado'] == 'Aprobado' ? 'bg-success' : 
+                                                   ($row['Estado'] == 'Pendiente' ? 'bg-warning text-dark' : 'bg-secondary') ?>">
+                                                <?= htmlspecialchars($row['Estado']) ?>
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td class="col-resumen text-left">
+                                        <span class="resumen-preview" 
+                                              data-bs-toggle="modal" 
+                                              data-bs-target="#modalResumen<?= $row['ID'] ?>"
+                                              title="Haz clic para ver el resumen completo">
+                                            <?= htmlspecialchars(substr($row['Resumen'], 0, 45)) ?>...
+                                        </span>
+                                    </td>
+                                    <td class="col-fecha text-center">
+                                        <div class="centered-content">
+                                            <?= date('d/m/Y', strtotime($row['Fecha_publicacion'])) ?>
+                                        </div>
+                                    </td>
+                                    <td class="col-pdf text-center">
+                                        <div class="centered-content">
+                                            <?php if (!empty($row['Archivo_pdf'])): ?>
+                                                <a href="../Archivos/<?= htmlspecialchars($row['Archivo_pdf']) ?>" target="_blank" class="btn btn-view btn-admin">
+                                                    <i class="fas fa-file-pdf"></i> PDF
+                                                </a>
+                                            <?php else: ?>
+                                                <span class="text-muted small">No disponible</span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </td>
+                                    <td class="col-carrera text-center">
+                                        <div class="centered-content">
+                                            <span class="carrera-compacta" title="<?= htmlspecialchars($row['NombreCarrera']) ?>">
+                                                <?= htmlspecialchars($row['NombreCarrera']) ?>
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td class="col-palabras text-center">
+                                        <div class="palabras-clave-container">
+                                            <?php if (!empty($palabras_clave)): ?>
+                                                <?php foreach (array_slice($palabras_clave, 0, 2) as $palabra): ?>
+                                                    <span class="keyword-badge"><?= htmlspecialchars($palabra) ?></span>
+                                                <?php endforeach; ?>
+                                                <?php if (count($palabras_clave) > 2): ?>
+                                                    <span class="keyword-badge">+<?= count($palabras_clave) - 2 ?> más</span>
+                                                <?php endif; ?>
+                                            <?php else: ?>
+                                                <span class="text-muted small">Sin palabras clave</span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </td>
+                                    <td class="col-acciones text-center">
+                                        <div class="action-buttons">
+                                            <button class="btn btn-details btn-admin" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#modalResumen<?= $row['ID'] ?>">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <a href="modificar_tesis.php?id=<?= $row['ID'] ?>" class="btn btn-edit btn-admin">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="eliminar_tesis.php?id=<?= $row['ID'] ?>" class="btn btn-delete btn-admin" 
+                                               onclick="return confirm('¿Está seguro de eliminar este plan de negocio? Esta acción no se puede deshacer.');">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <!-- Modal para mostrar detalles completos -->
+                                <div class="modal fade" id="modalResumen<?= $row['ID'] ?>" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog modal-lg">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">
+                                                    <i class="fas fa-file-alt me-2"></i>
+                                                    Detalles del Plan de Negocio
+                                                </h5>
+                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <div class="detail-item">
+                                                    <div class="detail-label">ID</div>
+                                                    <div class="detail-value"><?= $row['ID'] ?></div>
+                                                </div>
+                                                
+                                                <div class="detail-item">
+                                                    <div class="detail-label">Título</div>
+                                                    <div class="detail-value"><?= htmlspecialchars($row['Titulo']) ?></div>
+                                                </div>
+                                                
+                                                <div class="detail-item">
+                                                    <div class="detail-label">Estado</div>
+                                                    <div class="detail-value">
+                                                        <span class="badge-status 
+                                                            <?= $row['Estado'] == 'Aprobado' ? 'bg-success' : 
+                                                               ($row['Estado'] == 'Pendiente' ? 'bg-warning text-dark' : 'bg-secondary') ?>">
+                                                            <?= htmlspecialchars($row['Estado']) ?>
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="detail-item">
+                                                    <div class="detail-label">Resumen Completo</div>
+                                                    <div class="resumen-completo">
+                                                        <?= nl2br(htmlspecialchars($row['Resumen'])) ?>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="detail-item">
+                                                    <div class="detail-label">Palabras Clave</div>
+                                                    <div class="detail-value">
+                                                        <?php if (!empty($palabras_clave)): ?>
+                                                            <?php foreach ($palabras_clave as $palabra): ?>
+                                                                <span class="keyword-badge"><?= htmlspecialchars($palabra) ?></span>
+                                                            <?php endforeach; ?>
+                                                        <?php else: ?>
+                                                            <span class="text-muted">No hay palabras clave registradas</span>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="detail-item">
+                                                    <div class="detail-label">Carrera</div>
+                                                    <div class="detail-value"><?= htmlspecialchars($row['NombreCarrera']) ?></div>
+                                                </div>
+                                                
+                                                <div class="detail-item">
+                                                    <div class="detail-label">Fecha de Publicación</div>
+                                                    <div class="detail-value"><?= date('d/m/Y', strtotime($row['Fecha_publicacion'])) ?></div>
+                                                </div>
+                                                
+                                                <div class="detail-item">
+                                                    <div class="detail-label">Archivo PDF</div>
+                                                    <div class="detail-value">
+                                                        <?php if (!empty($row['Archivo_pdf'])): ?>
+                                                            <a href="../Archivos/<?= htmlspecialchars($row['Archivo_pdf']) ?>" target="_blank" class="btn btn-view">
+                                                                <i class="fas fa-file-pdf me-1"></i> Ver PDF
+                                                            </a>
+                                                        <?php else: ?>
+                                                            <span class="text-muted">No disponible</span>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <a href="modificar_tesis.php?id=<?= $row['ID'] ?>" class="btn btn-edit">
+                                                    <i class="fas fa-edit me-1"></i> Editar
+                                                </a>
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endwhile; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="9" class="text-center py-4">
+                                    <i class="fas fa-search fa-2x text-muted mb-2"></i>
+                                    <h6 class="text-muted">No se encontraron planes de negocio</h6>
+                                    <p class="text-muted small">
+                                        <?php if (!empty($filtro_busqueda) || !empty($filtro_estado) || !empty($filtro_carrera)): ?>
+                                            Intenta ajustar los filtros de búsqueda
+                                        <?php else: ?>
+                                            No hay planes de negocio registrados
+                                        <?php endif; ?>
+                                    </p>
+                                    <?php if (!empty($filtro_busqueda) || !empty($filtro_estado) || !empty($filtro_carrera)): ?>
+                                        <a href="?" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-times"></i> Limpiar Filtros
+                                        </a>
+                                    <?php else: ?>
+                                        <a href="ingresar_tesis.php" class="btn btn-success btn-sm">
+                                            <i class="fas fa-plus"></i> Agregar Primer Plan
+                                        </a>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <p>© <?= date('Y') ?> Repositorio de Planes de Negocios - Panel de Administración</p>
+        </div>
+    </footer>
+
+    <?php 
+    $stmt->close();
+    $conn->close(); 
+    ?>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.querySelector('select[name="orden"]').addEventListener('change', function() {
+            document.getElementById('filtersForm').submit();
+        });
+    </script>
 </body>
 </html>
-
-<?php
-// Cerrar la conexión a la base de datos
-$conn->close();
-?>

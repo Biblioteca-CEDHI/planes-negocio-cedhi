@@ -1,30 +1,29 @@
 <?php
-// Activar la visualización de errores durante el desarrollo
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
 
-// Iniciar la sesión
-session_start();
-include('../Conection/conexion.php');
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-// Conexión a la base de datos
+include_once "../Accesos/auth_central.php";
+
+$estaAutenticado = validarAutenticacionCentral();
+$usuarioData = $estaAutenticado ? obtenerUsuarioCentral() : null;
+$rol = $estaAutenticado ? strtolower($usuarioData['rol']) : null;
+
+include_once('../Conection/conexion.php');
+
 $conn = new mysqli($servername, $username, $password, $dbname);
 if ($conn->connect_error) {
     die("Conexión fallida: " . $conn->connect_error);
 }
 
-// Obtener parámetros de búsqueda enviados por GET
 $searchparam = isset($_GET['searchparam']) ? trim($_GET['searchparam']) : '';
 $searchparam_sql = $conn->real_escape_string($searchparam);
 
-// Obtener filtro de carrera (si se selecciona)
 $carrera_id = isset($_GET['carrera_id']) ? intval($_GET['carrera_id']) : 0;
 
-// Determinar ordenamiento predeterminado
 $order_by = "Fecha_publicacion DESC";
 
-// Cambiar orden según selección del usuario
 if (isset($_GET['orden'])) {
     switch ($_GET['orden']) {
         case 'fecha_asc': $order_by = "Fecha_publicacion ASC"; break;
@@ -36,29 +35,24 @@ if (isset($_GET['orden'])) {
     }
 }
 
-// Función para normalizar texto: quitar mayúsculas, tildes y caracteres especiales
 function normalizarTexto($texto) {
     $texto = mb_strtolower($texto, 'UTF-8');
     $texto = iconv('UTF-8', 'ASCII//TRANSLIT', $texto);
     return preg_replace('/[^a-z0-9\s]/i', '', $texto);
 }
 
-// Lista de stopwords que no queremos incluir como términos de búsqueda
 $stopwords = ['el', 'la', 'los', 'las', 'de', 'del', 'y', 'en', 'un', 'una', 'que', 'con', 'para', 'por', 'al', 'a'];
 
-// Normalizamos la búsqueda y separamos en palabras clave (tokens)
 $normalizado = normalizarTexto($searchparam_sql);
 $tokens = array_filter(explode(' ', $normalizado), function ($t) use ($stopwords) {
     return strlen($t) > 2 && !in_array($t, $stopwords);
 });
 
-// Construcción de cláusulas WHERE dinámicas para la búsqueda
 $where_clauses = [];
 
 foreach ($tokens as $word) {
     $escaped_word = $conn->real_escape_string($word);
 
-    // Si el token es numérico, también lo buscamos en Fecha de Publicación
     if (is_numeric($word)) {
         $where_clauses[] = "(
             LOWER(Titulo) LIKE '%$escaped_word%' OR 
@@ -73,12 +67,10 @@ foreach ($tokens as $word) {
     }
 }
 
-// Agregar filtro por carrera si corresponde
 if ($carrera_id > 0) {
     $where_clauses[] = "Tesis.Carrera_ID = $carrera_id";
 }
 
-// Armado final de la consulta SQL
 $sql = "SELECT Tesis.*, Carrera.Nombre AS Carrera_Nombre 
         FROM Tesis 
         LEFT JOIN Carrera ON Tesis.Carrera_ID = Carrera.ID";
@@ -89,13 +81,11 @@ if (!empty($where_clauses)) {
 
 $sql .= " ORDER BY $order_by";
 
-// Ejecutar consulta
 $result = $conn->query($sql);
 if (!$result) {
     die("Error en la consulta SQL: " . $conn->error);
 }
 
-// Si hubo resultados, registramos la palabra buscada en la tabla de sugerencias
 if (!empty($searchparam) && $result->num_rows > 0) {
     $palabra = strtolower($searchparam_sql);
     $checkSql = "SELECT contador FROM PalabrasBuscadas WHERE palabra = '$palabra'";
@@ -107,184 +97,415 @@ if (!empty($searchparam) && $result->num_rows > 0) {
         $conn->query("INSERT INTO PalabrasBuscadas (palabra, contador) VALUES ('$palabra', 1)");
     }
 }
-
-// Capturar rol de usuario para personalizar menú
-$rol = isset($_SESSION['rol']) ? $_SESSION['rol'] : null;
 ?>
 
-<!-- HTML para mostrar resultados -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Resultados de Búsqueda</title>
+    <title>Resultados de Búsqueda - Repositorio de Planes de Negocios</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    
+    <link rel="icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQradELIH2EABbwe93oJ0s--V91loD8gTe0jg&s" type="image/png">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="../estilos.css">
+    
     <style>
-        /* Diseño visual: tarjetas, colores por carrera y botones */
-        .card-bottom { display: flex; justify-content: space-between; margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px; }
-        .card-actions { display: flex; gap: 10px; }
-        .career-badge { padding: 6px 12px; font-size: 0.85rem; font-weight: bold; border-radius: 20px; color: white; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); }
-        .badge-0 { background-color: #e74c3c; } .badge-1 { background-color: #2980b9; } .badge-2 { background-color: #27ae60; }
-        .badge-3 { background-color: #8e44ad; } .badge-4 { background-color: #d35400; } .badge-5 { background-color: #16a085; }
-        .badge-6 { background-color: #2c3e50; } .badge-7 { background-color: #f39c12; } .badge-8 { background-color: #c0392b; }
+        .main-container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.05);
+            padding: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .page-header {
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .page-title {
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+        
+        .search-term {
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+        
+        .filter-section {
+            background-color: var(--light-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+        }
+        
+        .filter-label {
+            font-weight: 600;
+            margin-right: 10px;
+            color: var(--secondary-color);
+        }
+        
+        .form-select {
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            padding: 8px 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .thesis-card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            overflow: hidden;
+        }
+        
+        .thesis-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        
+        .card-body {
+            padding: 25px;
+        }
+        
+        .card-title {
+            font-weight: 700;
+            color: var(--dark-color);
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+        
+        .card-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+        }
+        
+        .meta-item i {
+            margin-right: 5px;
+            color: var(--primary-color);
+        }
+        
+        .card-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .card-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-details {
+            background-color: white;
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-details:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-pdf {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-pdf:hover {
+            background-color: #5e1491;
+            border-color: #5e1491;
+        }
+        
+        .career-badge {
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            border-radius: 20px;
+            color: white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+        
+        .badge-0 { background-color: #e74c3c; }
+        .badge-1 { background-color: #2980b9; }
+        .badge-2 { background-color: #27ae60; }
+        .badge-3 { background-color: #8e44ad; }
+        .badge-4 { background-color: #d35400; }
+        .badge-5 { background-color: #16a085; }
+        .badge-6 { background-color: #2c3e50; }
+        .badge-7 { background-color: #f39c12; }
+        .badge-8 { background-color: #c0392b; }
         .badge-9 { background-color: #34495e; }
+        
+        .collapse-content {
+            padding: 20px;
+            background-color: var(--light-color);
+            border-radius: 8px;
+            border-left: 3px solid var(--accent-color);
+            margin-top: 15px;
+        }
+        
+        .section-title {
+            font-weight: 600;
+            color: var(--secondary-color);
+            margin-bottom: 10px;
+        }
+        
+        .keywords {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .keyword {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+        
+        .suggestions-section {
+            background-color: var(--light-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+        
+        .suggestion-badge {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            display: inline-block;
+            margin: 5px;
+        }
+        
+        .suggestion-badge:hover {
+            background-color: var(--accent-color);
+            color: var(--dark-color);
+            transform: translateY(-2px);
+            text-decoration: none;
+        }
+        
+        @media (max-width: 768px) {
+            .card-bottom {
+                flex-direction: column;
+                gap: 15px;
+                align-items: flex-start;
+            }
+            
+            .card-actions {
+                flex-direction: column;
+                width: 100%;
+            }
+            
+            .card-actions .btn {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- Incluimos el navbar -->
+    <?php include_once '../navbar.php'; ?>
 
-<!-- Menú de navegación -->
-<nav class="navbar">
-    <div><strong>Repositorio de Planes de Negocios</strong></div>
-    <div>
-        <a href="../index.php">Inicio</a>
-        <a href="lista_tesis.php">Planes</a>
-        <?php if ($rol == 'Administrador' || $rol == 'Owner'): ?>
-            <a href="../Admin/gestionar_tesis.php">Gestionar Planes</a>
-        <?php endif; ?>
-        <?php if ($rol == 'Owner'): ?>
-            <a href="../Admin/gestionar_administradores.php">Gestionar Administradores</a>
-        <?php endif; ?>
-        <a href="../Accesos/logout.php">Cerrar Sesión</a>
-    </div>
-</nav>
-
-<!-- Contenido principal -->
-<div class="container table-container">
-    <h2 class="text-center">Resultados de búsqueda para: "<?= htmlspecialchars($searchparam) ?>"</h2>
-
-    <!-- Filtro por carrera si corresponde -->
-    <?php if ($carrera_id > 0):
-        $nombre_carrera = 'Carrera seleccionada';
-        $query_nombre = $conn->query("SELECT Nombre FROM Carrera WHERE ID = $carrera_id");
-        if ($query_nombre && $query_nombre->num_rows > 0) {
-            $nombre_carrera = $query_nombre->fetch_assoc()['Nombre'];
-        }
-    ?>
-        <p class="text-center"><strong>Filtrado por carrera:</strong> <?= htmlspecialchars($nombre_carrera) ?></p>
-    <?php endif; ?>
-
-    <!-- Filtro de carrera y ordenamiento -->
-    <form class="form-inline mb-4" method="GET">
-        <input type="hidden" name="searchparam" value="<?= htmlspecialchars($searchparam) ?>">
-
-        <!-- Filtro carrera -->
-        <label>Carrera:</label>
-        <select name="carrera_id" class="form-control" onchange="this.form.submit()">
-            <option value="0">Todas las carreras</option>
-            <?php
-            $query_carreras = $conn->query("SELECT ID, Nombre FROM Carrera ORDER BY Nombre ASC");
-            while ($row_carrera = $query_carreras->fetch_assoc()) {
-                $selected = ($carrera_id == $row_carrera['ID']) ? 'selected' : '';
-                echo "<option value='{$row_carrera['ID']}' $selected>" . htmlspecialchars($row_carrera['Nombre']) . "</option>";
-            }
+    <div class="container main-container">
+        <div class="page-header">
+            <h1 class="page-title">Resultados de Búsqueda</h1>
+            <p class="lead">Para: <span class="search-term">"<?= htmlspecialchars($searchparam) ?>"</span></p>
+            
+            <?php if ($carrera_id > 0): 
+                $nombre_carrera = 'Carrera seleccionada';
+                $query_nombre = $conn->query("SELECT Nombre FROM Carrera WHERE ID = $carrera_id");
+                if ($query_nombre && $query_nombre->num_rows > 0) {
+                    $nombre_carrera = $query_nombre->fetch_assoc()['Nombre'];
+                }
             ?>
-        </select>
+                <p><strong>Filtrado por carrera:</strong> <?= htmlspecialchars($nombre_carrera) ?></p>
+            <?php endif; ?>
+        </div>
+        
+        <div class="filter-section">
+            <form class="row g-3 align-items-center" method="GET">
+                <input type="hidden" name="searchparam" value="<?= htmlspecialchars($searchparam) ?>">
+                
+                <div class="col-md-4">
+                    <label for="carrera_id" class="filter-label col-form-label">Filtrar por carrera:</label>
+                    <select name="carrera_id" id="carrera_id" class="form-select" onchange="this.form.submit()">
+                        <option value="0">Todas las carreras</option>
+                        <?php
+                        $query_carreras = $conn->query("SELECT ID, Nombre FROM Carrera ORDER BY Nombre ASC");
+                        while ($row_carrera = $query_carreras->fetch_assoc()) {
+                            $selected = ($carrera_id == $row_carrera['ID']) ? 'selected' : '';
+                            echo "<option value='{$row_carrera['ID']}' $selected>" . htmlspecialchars($row_carrera['Nombre']) . "</option>";
+                        }
+                        ?>
+                    </select>
+                </div>
+                
+                <div class="col-md-4">
+                    <label for="orden" class="filter-label col-form-label">Ordenar por:</label>
+                    <select name="orden" id="orden" class="form-select" onchange="this.form.submit()">
+                        <option value="fecha_desc" <?= (($_GET['orden'] ?? '') === 'fecha_desc') ? 'selected' : '' ?>>Más recientes</option>
+                        <option value="fecha_asc" <?= (($_GET['orden'] ?? '') === 'fecha_asc') ? 'selected' : '' ?>>Más antiguas</option>
+                        <option value="titulo_asc" <?= (($_GET['orden'] ?? '') === 'titulo_asc') ? 'selected' : '' ?>>Título A-Z</option>
+                        <option value="titulo_desc" <?= (($_GET['orden'] ?? '') === 'titulo_desc') ? 'selected' : '' ?>>Título Z-A</option>
+                        <option value="visualizaciones_asc" <?= (($_GET['orden'] ?? '') === 'visualizaciones_asc') ? 'selected' : '' ?>>Menos visualizaciones</option>
+                        <option value="visualizaciones_desc" <?= (($_GET['orden'] ?? '') === 'visualizaciones_desc') ? 'selected' : '' ?>>Más visualizaciones</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+        
+        <?php if ($result && $result->num_rows > 0): ?>
+            <div class="thesis-list">
+                <?php while($row = $result->fetch_assoc()): ?>
+                    <?php
+                    $tesis_id = $row['ID'];
+                    $carrera_nombre = $row['Carrera_Nombre'] ?? 'Sin carrera';
+                    $color_index = $row['Carrera_ID'] % 10;
 
-        <!-- Orden -->
-        <label>Orden:</label>
-        <select name="orden" class="form-control" onchange="this.form.submit()">
-            <option value="fecha_desc" <?= (($_GET['orden'] ?? '') === 'fecha_desc') ? 'selected' : '' ?>>Más recientes</option>
-            <option value="fecha_asc" <?= (($_GET['orden'] ?? '') === 'fecha_asc') ? 'selected' : '' ?>>Más antiguas</option>
-            <option value="titulo_asc" <?= (($_GET['orden'] ?? '') === 'titulo_asc') ? 'selected' : '' ?>>Título A-Z</option>
-            <option value="titulo_desc" <?= (($_GET['orden'] ?? '') === 'titulo_desc') ? 'selected' : '' ?>>Título Z-A</option>
-            <option value="visualizaciones_asc" <?= (($_GET['orden'] ?? '') === 'visualizaciones_asc') ? 'selected' : '' ?>>Menos visualizaciones</option>
-            <option value="visualizaciones_desc" <?= (($_GET['orden'] ?? '') === 'visualizaciones_desc') ? 'selected' : '' ?>>Más visualizaciones</option>
-        </select>
-    </form>
+                    $sql_palabras = "SELECT Palabra FROM PalabraClave
+                                    JOIN TesisPalabraClave ON PalabraClave.ID = TesisPalabraClave.PalabraClave_ID
+                                    WHERE TesisPalabraClave.Tesis_ID = ?";
+                    $stmt_palabras = $conn->prepare($sql_palabras);
+                    $stmt_palabras->bind_param("i", $tesis_id);
+                    $stmt_palabras->execute();
+                    $result_palabras = $stmt_palabras->get_result();
 
-    <!-- Resultados -->
-    <?php if ($result && $result->num_rows > 0): ?>
-        <div class="row">
-        <?php while($row = $result->fetch_assoc()): ?>
-            <?php
-            $tesis_id = $row['ID'];
-            $carrera_nombre = $row['Carrera_Nombre'] ?? 'Sin carrera';
-            $color_index = $row['Carrera_ID'] % 10;
-
-            // Obtener palabras clave de cada tesis
-            $sql_palabras = "SELECT Palabra FROM PalabraClave
-                            JOIN TesisPalabraClave ON PalabraClave.ID = TesisPalabraClave.PalabraClave_ID
-                            WHERE TesisPalabraClave.Tesis_ID = ?";
-            $stmt_palabras = $conn->prepare($sql_palabras);
-            $stmt_palabras->bind_param("i", $tesis_id);
-            $stmt_palabras->execute();
-            $result_palabras = $stmt_palabras->get_result();
-
-            $palabras_clave = [];
-            while ($row_palabra = $result_palabras->fetch_assoc()) {
-                $palabras_clave[] = $row_palabra['Palabra'];
-            }
-            $lista_palabras = implode(", ", $palabras_clave);
-            ?>
-            <!-- Tarjeta de resultado -->
-            <div class="col-12 mb-4">
-                <div class="card shadow">
-                    <div class="card-body">
-                        <h5><?= htmlspecialchars($row['Titulo']) ?></h5>
-                        <p><strong>Fecha:</strong> <?= htmlspecialchars($row['Fecha_publicacion']) ?> |
-                           <strong>Estado:</strong> <?= htmlspecialchars($row['Estado']) ?> |
-                           <strong>Visualizaciones:</strong> <?= htmlspecialchars($row['Visualizaciones']) ?>
-                        </p>
-                        <div class="card-bottom">
-                            <div class="card-actions">
-                                <button class="btn btn-outline-secondary btn-sm" type="button" data-toggle="collapse" data-target="#detalles<?= $tesis_id ?>">Mostrar Detalles</button>
-                                <a href="../Conection/ver_pdf.php?id=<?= $tesis_id ?>" target="_blank" class="btn btn-primary btn-sm">Ver PDF</a>
+                    $palabras_clave = [];
+                    while ($row_palabra = $result_palabras->fetch_assoc()) {
+                        $palabras_clave[] = $row_palabra['Palabra'];
+                    }
+                    ?>
+                    
+                    <div class="card thesis-card">
+                        <div class="card-body">
+                            <h3 class="card-title"><?= htmlspecialchars($row['Titulo']) ?></h3>
+                            
+                            <div class="card-meta">
+                                <span class="meta-item">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    <?= htmlspecialchars($row['Fecha_publicacion']) ?>
+                                </span>
+                                <span class="meta-item">
+                                    <i class="fas fa-check-circle"></i>
+                                    <?= htmlspecialchars($row['Estado']) ?>
+                                </span>
+                                <span class="meta-item">
+                                    <i class="fas fa-eye"></i>
+                                    <?= htmlspecialchars($row['Visualizaciones']) ?> visualizaciones
+                                </span>
                             </div>
-                            <div class="career-badge badge-<?= $color_index ?>">
-                                <?= htmlspecialchars($carrera_nombre) ?>
+                            
+                            <div class="card-bottom">
+                                <div class="card-actions">
+                                    <button class="btn btn-details" type="button" data-bs-toggle="collapse" 
+                                        data-bs-target="#detalles<?= $tesis_id ?>" aria-expanded="false">
+                                        <i class="fas fa-info-circle"></i> Detalles
+                                    </button>
+                                    <a href="../Conection/ver_pdf.php?id=<?= $tesis_id ?>" target="_blank" class="btn btn-pdf">
+                                        <i class="fas fa-file-pdf"></i> Ver PDF
+                                    </a>
+                                </div>
+                                <div class="career-badge badge-<?= $color_index ?>">
+                                    <?= htmlspecialchars($carrera_nombre) ?>
+                                </div>
                             </div>
-                        </div>
-                        <div class="collapse mt-3" id="detalles<?= $tesis_id ?>">
-                            <p><strong>Resumen:</strong><br><?= nl2br(htmlspecialchars($row['Resumen'])) ?></p>
-                            <p><strong>Palabras Clave:</strong> <?= htmlspecialchars($lista_palabras) ?></p>
+
+                            <div class="collapse" id="detalles<?= $tesis_id ?>">
+                                <div class="collapse-content">
+                                    <h5 class="section-title">Resumen</h5>
+                                    <p><?= nl2br(htmlspecialchars($row['Resumen'])) ?></p>
+                                    
+                                    <?php if (!empty($palabras_clave)): ?>
+                                        <h5 class="section-title">Palabras Clave</h5>
+                                        <div class="keywords">
+                                            <?php foreach ($palabras_clave as $palabra): ?>
+                                                <span class="keyword"><?= htmlspecialchars($palabra) ?></span>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
+                <?php 
+                $stmt_palabras->close();
+                endwhile; ?>
             </div>
-        <?php endwhile; ?>
-        </div>
-    <?php else: ?>
-        <p class="text-center mt-4">No se encontraron resultados para "<strong><?= htmlspecialchars($searchparam) ?></strong>".</p>
-    <?php endif; ?>
+        <?php else: ?>
+            <div class="alert alert-info text-center">
+                <i class="fas fa-search fa-2x mb-3"></i>
+                <h4>No se encontraron resultados</h4>
+                <p>No hay planes de negocio que coincidan con "<strong><?= htmlspecialchars($searchparam) ?></strong>".</p>
+                <a href="../index.php" class="btn btn-primary mt-2">
+                    <i class="fas fa-home"></i> Volver al Inicio
+                </a>
+            </div>
+        <?php endif; ?>
 
-    <!-- Sección de sugerencias -->
-    <?php if (!empty($searchparam)): ?>
-    <div class="mt-4">
-        <h5>Otras personas también buscaron:</h5>
-        <div>
-            <?php
-            $base = substr(strtolower($searchparam), 0, 3);
-            $query_sugerencias = "SELECT palabra FROM PalabrasBuscadas 
-                                  WHERE palabra LIKE '%$base%' AND palabra != '$searchparam_sql' 
-                                  ORDER BY contador DESC LIMIT 10";
-            $resultado_sugerencias = $conn->query($query_sugerencias);
-            if ($resultado_sugerencias && $resultado_sugerencias->num_rows > 0):
-                while ($row_sugerencia = $resultado_sugerencias->fetch_assoc()):
-                    $sugerida = htmlspecialchars($row_sugerencia['palabra']);
-                    echo "<a href='?searchparam=" . urlencode($sugerida) . "' class='badge badge-info m-1'>$sugerida</a>";
-                endwhile;
-            else:
-                echo "<span class='text-muted'>No se encontraron sugerencias.</span>";
-            endif;
-            ?>
+        <?php if (!empty($searchparam)): ?>
+        <div class="suggestions-section">
+            <h5><i class="fas fa-lightbulb"></i> Otras personas también buscaron:</h5>
+            <div class="mt-3">
+                <?php
+                $base = substr(strtolower($searchparam), 0, 3);
+                $query_sugerencias = "SELECT palabra FROM PalabrasBuscadas 
+                                      WHERE palabra LIKE '%$base%' AND palabra != '$searchparam_sql' 
+                                      ORDER BY contador DESC LIMIT 10";
+                $resultado_sugerencias = $conn->query($query_sugerencias);
+                if ($resultado_sugerencias && $resultado_sugerencias->num_rows > 0):
+                    while ($row_sugerencia = $resultado_sugerencias->fetch_assoc()):
+                        $sugerida = htmlspecialchars($row_sugerencia['palabra']);
+                        echo "<a href='?searchparam=" . urlencode($sugerida) . "' class='suggestion-badge'>$sugerida</a>";
+                    endwhile;
+                else:
+                    echo "<p class='text-muted'>No se encontraron sugerencias.</p>";
+                endif;
+                ?>
+            </div>
         </div>
+        <?php endif; ?>
     </div>
-    <style>
-        .badge-info { text-align: center; cursor: pointer; font-size: 1rem; }
-    </style>
-    <?php endif; ?>
-</div>
 
-<!-- Cerrar conexión -->
-<?php $conn->close(); ?>
+    <footer class="footer">
+        <div class="container">
+            <p>© <?= date('Y') ?> Repositorio de Planes de Negocios - Todos los derechos reservados</p>
+        </div>
+    </footer>
 
-<!-- Scripts Bootstrap -->
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <?php $conn->close(); ?>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-
-
-
-

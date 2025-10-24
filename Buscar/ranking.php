@@ -1,9 +1,16 @@
 <?php
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-session_start();
-include ('../Conection/conexion.php');
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+include_once "../Accesos/auth_central.php";
+
+$estaAutenticado = validarAutenticacionCentral();
+$usuarioData = $estaAutenticado ? obtenerUsuarioCentral() : null;
+$rol = $estaAutenticado ? strtolower($usuarioData['rol']) : null;
+
+include_once('../Conection/conexion.php');
 
 $conn = new mysqli($servername, $username, $password, $dbname);
 if ($conn->connect_error) {
@@ -15,7 +22,6 @@ $result = $conn->query($sql);
 if (!$result) {
     die("Error en la consulta SQL: " . $conn->error);
 }
-$rol = isset($_SESSION['rol']) ? $_SESSION['rol'] : null;
 ?>
 
 <!DOCTYPE html>
@@ -23,75 +29,16 @@ $rol = isset($_SESSION['rol']) ? $_SESSION['rol'] : null;
 <head>
     <meta charset="UTF-8">
     <title>Ranking de Planes de Negocios - Top 10 Visualizaciones</title>
-    <link rel="icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQradELIH2EABbwe93oJ0s--V91loD8gTe0jg&s" type="image/png">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- Bootstrap CSS -->
+    
+    <link rel="icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQradELIH2EABbwe93oJ0s--V91loD8gTe0jg&s" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="../estilos.css">
+    
     <style>
-        :root {
-            --primary-color: #6a1b9a;
-            --secondary-color: #9c27b0;
-            --accent-color: #ff9800;
-            --dark-color: #2c3e50;
-            --light-color: #f8f9fa;
-            --overlay-color: rgba(44, 62, 80, 0.85);
-        }
-        
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: #f5f7fa;
-            color: var(--dark-color);
-            padding-top: 80px;
-        }
-        
-        /* Navbar - Coherente con index.php */
-        .navbar {
-            background: var(--dark-color) !important;
-            padding: 15px 30px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            position: fixed;
-            top: 0;
-            width: 100%;
-            z-index: 1000;
-        }
-        
-        .navbar-brand {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: white !important;
-            display: flex;
-            align-items: center;
-        }
-        
-        .navbar-brand i {
-            margin-right: 10px;
-            color: var(--accent-color);
-        }
-        
-        .navbar-nav .nav-link {
-            color: rgba(255, 255, 255, 0.9) !important;
-            font-weight: 500;
-            margin: 0 8px;
-            padding: 8px 15px;
-            border-radius: 4px;
-            transition: all 0.3s ease;
-        }
-        
-        .navbar-nav .nav-link:hover {
-            color: white !important;
-            background: rgba(255, 255, 255, 0.1);
-        }
-        
-        .navbar-nav .nav-link.active {
-            background: var(--secondary-color);
-            color: white !important;
-        }
-        
-        /* Contenedor principal */
         .main-container {
             max-width: 1000px;
             margin: 30px auto;
@@ -101,7 +48,6 @@ $rol = isset($_SESSION['rol']) ? $_SESSION['rol'] : null;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
         }
         
-        /* Título */
         .page-title {
             color: var(--primary-color);
             font-weight: 700;
@@ -123,7 +69,6 @@ $rol = isset($_SESSION['rol']) ? $_SESSION['rol'] : null;
             border-radius: 2px;
         }
         
-        /* Items del ranking */
         .ranking-item {
             display: flex;
             align-items: center;
@@ -141,7 +86,6 @@ $rol = isset($_SESSION['rol']) ? $_SESSION['rol'] : null;
             box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
         }
         
-        /* Números del ranking */
         .ranking-number {
             flex-shrink: 0;
             width: 60px;
@@ -157,7 +101,6 @@ $rol = isset($_SESSION['rol']) ? $_SESSION['rol'] : null;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
         }
         
-        /* Colores para los primeros puestos */
         .ranking-number.gold {
             background: linear-gradient(135deg, #FFD700, #D4AF37);
         }
@@ -174,7 +117,6 @@ $rol = isset($_SESSION['rol']) ? $_SESSION['rol'] : null;
             background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
         }
         
-        /* Contenido del item */
         .ranking-content {
             flex-grow: 1;
         }
@@ -210,7 +152,6 @@ $rol = isset($_SESSION['rol']) ? $_SESSION['rol'] : null;
             color: var(--primary-color);
         }
         
-        /* Botones */
         .btn-ranking {
             padding: 8px 20px;
             border-radius: 6px;
@@ -242,7 +183,6 @@ $rol = isset($_SESSION['rol']) ? $_SESSION['rol'] : null;
             color: white;
         }
         
-        /* Detalles colapsables */
         .ranking-details {
             margin-top: 15px;
             padding: 15px;
@@ -271,8 +211,8 @@ $rol = isset($_SESSION['rol']) ? $_SESSION['rol'] : null;
             font-weight: 500;
         }
         
-        /* Responsive */
         @media (max-width: 768px) {
+            
             .ranking-item {
                 flex-direction: column;
                 align-items: flex-start;
@@ -289,7 +229,6 @@ $rol = isset($_SESSION['rol']) ? $_SESSION['rol'] : null;
             }
         }
         
-        /* Mensaje cuando no hay resultados */
         .no-results {
             text-align: center;
             padding: 40px;
@@ -303,46 +242,22 @@ $rol = isset($_SESSION['rol']) ? $_SESSION['rol'] : null;
             margin-bottom: 20px;
             display: block;
         }
+        .ranking-meta .icon-spacing {
+            margin-right: 6px;
+        }
+
+        .btn-icon-spacing {
+            margin-right: 5px;
+        }
+
+        .ranking-meta i,
+        .ranking-actions i {
+            margin-right: 6px;
+        }
     </style>
 </head>
 <body>
-    <!-- Navbar - Coherente con index.php -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">
-                <i class="fas fa-trophy"></i> Ranking Planes
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="../index.php">Inicio</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="lista_tesis.php">Planes</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="ranking.php">Ranking</a>
-                    </li>
-                    <?php if ($rol == 'Administrador' || $rol == 'Owner'): ?>
-                    <li class="nav-item">
-                        <a class="nav-link" href="../Admin/gestionar_tesis.php">Gestionar Planes</a>
-                    </li>
-                    <?php endif; ?>
-                    <?php if ($rol == 'Owner'): ?>
-                    <li class="nav-item">
-                        <a class="nav-link" href="../Admin/gestionar_administradores.php">Administradores</a>
-                    </li>
-                    <?php endif; ?>
-                    <li class="nav-item">
-                        <a class="nav-link" href="../Accesos/logout.php">Cerrar sesión</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+    <?php include_once '../navbar.php'; ?>
 
     <div class="main-container">
         <h1 class="page-title">Top 10 Planes Más Visualizados</h1>
@@ -365,7 +280,6 @@ $rol = isset($_SESSION['rol']) ? $_SESSION['rol'] : null;
                     $palabras_clave[] = $row_palabra['Palabra'];
                 }
                 
-                // Clase para el número según posición
                 $clase_numero = 'other';
                 if ($posicion === 1) {
                     $clase_numero = 'gold';
@@ -380,17 +294,17 @@ $rol = isset($_SESSION['rol']) ? $_SESSION['rol'] : null;
                     <div class="ranking-content">
                         <h3 class="ranking-title"><?= htmlspecialchars($row['Titulo']) ?></h3>
                         <div class="ranking-meta">
-                            <span><i class="fas fa-calendar-alt"></i> <?= htmlspecialchars($row['Fecha_publicacion']) ?></span>
-                            <span><i class="fas fa-check-circle"></i> <?= htmlspecialchars($row['Estado']) ?></span>
-                            <span class="ranking-views"><i class="fas fa-eye"></i> <?= htmlspecialchars($row['Visualizaciones']) ?> visualizaciones</span>
+                            <span><i class="fas fa-calendar-alt icon-spacing"></i> <?= htmlspecialchars($row['Fecha_publicacion']) ?></span>
+                            <span><i class="fas fa-check-circle icon-spacing"></i> <?= htmlspecialchars($row['Estado']) ?></span>
+                            <span class="ranking-views"><i class="fas fa-eye icon-spacing"></i> <?= htmlspecialchars($row['Visualizaciones']) ?> visualizaciones</span>
                         </div>
                         
                         <div class="ranking-actions">
                             <button class="btn btn-ranking btn-details" type="button" data-bs-toggle="collapse" data-bs-target="#detalles<?= $row['ID'] ?>">
-                                <i class="fas fa-info-circle"></i> Detalles
+                                <i class="fas fa-info-circle btn-icon-spacing"></i> Detalles
                             </button>
                             <a href="../Conection/ver_pdf.php?id=<?= $row['ID'] ?>" target="_blank" class="btn btn-ranking btn-pdf">
-                                <i class="fas fa-file-pdf"></i> Ver PDF
+                                <i class="fas fa-file-pdf btn-icon-spacing"></i> Ver PDF
                             </a>
                         </div>
                         
@@ -411,6 +325,7 @@ $rol = isset($_SESSION['rol']) ? $_SESSION['rol'] : null;
                 </div>
             <?php 
                 $posicion++;
+                $stmt_palabras->close();
             endwhile; ?>
         <?php else: ?>
             <div class="no-results">
@@ -420,11 +335,15 @@ $rol = isset($_SESSION['rol']) ? $_SESSION['rol'] : null;
         <?php endif; ?>
     </div>
 
-    <!-- Bootstrap JS -->
+    <footer class="footer">
+        <div class="container">
+            <p>© <?= date('Y') ?> Repositorio de Planes de Negocios - Todos los derechos reservados</p>
+        </div>
+    </footer>
+
+    <?php $conn->close(); ?>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Font Awesome -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
 </body>
 </html>
-
-<?php $conn->close(); ?>
