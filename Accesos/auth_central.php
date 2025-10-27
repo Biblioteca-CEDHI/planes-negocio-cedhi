@@ -7,11 +7,11 @@ function validarAutenticacionCentral() {
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
-
-    if (!empty($_GET['token'])) {
+    $token = $_COOKIE['auth_token'] ?? ($_GET['token'] ?? null);
+    if (!empty($token)) {
         try {
             $key = 'cedhi2024biblio';
-            $decoded = JWT::decode($_GET['token'], new Key($key, 'HS256'));
+            $decoded = JWT::decode($token, new Key($key, 'HS256'));
             $userData = (array) $decoded;
 
             // Reiniciar sesión anterior
@@ -23,6 +23,19 @@ function validarAutenticacionCentral() {
             $_SESSION['user_last_name']      = $userData['apellido'] ?? null;
             $_SESSION['role']                = strtolower($userData['rol'] ?? '');
 
+            if (!isset($_COOKIE['auth_token'])) {
+                setcookie('auth_token', $token, [
+                    'expires' => time() + 3600,
+                    'path' => '/',
+                    'secure' => false, //cambiar a true si se usa HTTPS
+                    'httponly' => true,
+                    'samesite' => 'Lax'
+                ]);
+
+                $redirect = strtok($_SERVER["REQUEST_URI"], '?');
+                header("Location: $redirect");
+                exit;
+            }
             return true;
         } catch (Exception $e) {
             error_log("AUTH_CENTRAL: Error JWT -> " . $e->getMessage());
