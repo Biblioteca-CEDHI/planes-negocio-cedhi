@@ -23,19 +23,22 @@ function validarAutenticacionCentral() {
             $_SESSION['user_last_name']      = $userData['apellido'] ?? null;
             $_SESSION['role']                = strtolower($userData['rol'] ?? '');
 
-            if (!isset($_COOKIE['auth_token'])) {
+            // Si viene el token por la URL, lo guardamos y redirigimos para limpiarla
+            if (isset($_GET['token'])) {
                 setcookie('auth_token', $token, [
                     'expires' => time() + 3600,
                     'path' => '/',
-                    'secure' => false, //cambiar a true si se usa HTTPS
+                    'secure' => false, // cambiar a true si usas HTTPS
                     'httponly' => true,
                     'samesite' => 'Lax'
                 ]);
 
+                // Quitar el token de la URL
                 $redirect = strtok($_SERVER["REQUEST_URI"], '?');
                 header("Location: $redirect");
                 exit;
             }
+
             return true;
         } catch (Exception $e) {
             error_log("AUTH_CENTRAL: Error JWT -> " . $e->getMessage());
