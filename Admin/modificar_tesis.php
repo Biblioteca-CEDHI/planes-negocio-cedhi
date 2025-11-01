@@ -1,10 +1,8 @@
 <?php
-// modificar_tesis.php
 
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-// --- Autenticación y session ---
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -20,13 +18,11 @@ $usuarioData = obtenerUsuarioCentral();
 $rol = strtolower($usuarioData['rol']);
 $estaAutenticado = true;
 
-// Verificar permisos de administrador
 if ($rol !== 'admin' && $rol !== 'owner') {
     header("Location: http://localhost/BibliotecaCEDHI/?error=permisos");
     exit();
 }
 
-// --- Conexión a BD ---
 include_once "../Conection/conexion.php";
 
 $conn = new mysqli($servername, $username, $password, $dbname);
@@ -80,16 +76,13 @@ if (isset($_GET['id'])) {
     <title>Modificar Plan de Negocios - Panel de Administración</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <!-- Los mismos recursos que index.php -->
     <link rel="icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQradELIH2EABbwe93oJ0s--V91loD8gTe0jg&s" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Estilos centralizados -->
     <link rel="stylesheet" href="../estilos.css">
     
-    <!-- Estilos específicos para formulario de modificación -->
     <style>
         
         .main-container {
@@ -256,7 +249,6 @@ if (isset($_GET['id'])) {
     </style>
 </head>
 <body>
-    <!-- Incluimos el navbar -->
     <?php include_once '../navbar.php'; ?>
 
     <div class="container main-container">
@@ -349,17 +341,14 @@ if (isset($_GET['id'])) {
         </div>
     </div>
 
-    <!-- Footer -->
     <footer class="footer">
         <div class="container">
             <p>© <?= date('Y') ?> Repositorio de Planes de Negocios - Panel de Administración</p>
         </div>
     </footer>
 
-    <!-- Cerrar conexión -->
     <?php $conn->close(); ?>
 
-    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
