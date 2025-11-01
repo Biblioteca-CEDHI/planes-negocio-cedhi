@@ -23,7 +23,6 @@ function validarAutenticacionCentral() {
             $_SESSION['user_last_name']      = $userData['apellido'] ?? null;
             $_SESSION['role']                = strtolower($userData['rol'] ?? '');
 
-            // Si viene el token por la URL, lo guardamos y redirigimos para limpiarla
             if (isset($_GET['token'])) {
                 setcookie('auth_token', $token, [
                     'expires' => time() + 3600,
@@ -33,7 +32,6 @@ function validarAutenticacionCentral() {
                     'samesite' => 'Lax'
                 ]);
 
-                // Quitar el token de la URL
                 $redirect = strtok($_SERVER["REQUEST_URI"], '?');
                 header("Location: $redirect");
                 exit;

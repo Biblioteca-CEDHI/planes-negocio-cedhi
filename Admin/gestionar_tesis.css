@@ -1,32 +1,24 @@
 :root {
-    /* --- Variables de Colores Base (Ajusta estos valores si deseas cambiar el tema) --- */
-    --primary-color: #6a1b9a;        /* Morado Principal (Botones, Borders de énfasis) */
-    --secondary-color: #9c27b0;      /* Amarillo/Ámbar Secundario (Hover de filtros, Botones de Editar) */
-    --accent-color: #ff9800;         /* Turquesa/Cian (Acento en info de usuario y resumen) */
+    --primary-color: #6a1b9a;
+    --secondary-color: #9c27b0;
+    --accent-color: #ff9800;
     
-    /* --- Colores de UI y Estado --- */
-    --dark-color: #2c3e50;           /* Color Oscuro (Texto principal, encabezado de tabla) */
-    --light-color: #f8f9fa;          /* Color de Fondo Claro (Filtros, resumen completo) */
-    --white-color: white;            /* Blanco puro */
-    --delete-color: #dc3545;         /* Rojo (Botón de Eliminar) */
-    --details-color: #6c757d;        /* Gris Medio (Botones de Detalle, labels en móvil) */
-    --details-hover-darker: #5a6268; /* Gris más oscuro para hover de "Limpiar" */
+    --dark-color: #2c3e50;
+    --light-color: #f8f9fa;
+    --white-color: white;
+    --delete-color: #dc3545;
+    --details-color: #6c757d;
+    --details-hover-darker: #5a6268;
     
-    /* --- Bordes y Sombras --- */
-    --border-color: #e9ecef;         /* Gris muy claro (Bordes de cards/filtros) */
-    --table-border-color: #eee;      /* Gris más suave para líneas de tabla y separadores */
-    --hover-color: rgba(106, 27, 154, 0.05); /* Hover en filas de tabla (ligero morado) */
+    --border-color: #e9ecef;
+    --table-border-color: #eee;
+    --hover-color: rgba(106, 27, 154, 0.05);
     
-    /* --- Componentes Específicos --- */
-    --info-bg: #e7f3ff;              /* Fondo para información de resultados */
-    --filter-badge-bg: #e9ecef;      /* Fondo para badges de palabras clave */
-    --filter-badge-text: #495057;    /* Texto para badges de palabras clave */
-    --text-muted-color: #555;        /* Color para texto menos prominente (detalles) */
+    --info-bg: #e7f3ff;
+    --filter-badge-bg: #e9ecef;
+    --filter-badge-text: #495057;
+    --text-muted-color: #555;
 }
-
-/* ========================================================== */
-/* ESTILOS GENERALES Y ESCRITORIO */
-/* ========================================================== */
 
 .main-container {
     background-color: var(--white-color);
@@ -63,7 +55,6 @@
     font-size: 0.9rem;
 }
 
-/* --- Tabla --- */
 .table-container {
     background: var(--white-color);
     border-radius: 8px;
@@ -99,7 +90,6 @@
     background-color: var(--hover-color);
 }
 
-/* Tabla optimizada */
 .table-wrapper {
     width: 100%;
     overflow-x: auto;
@@ -111,7 +101,6 @@
     margin: 0;
 }
 
-/* Ajustes de columnas específicas (mantenidos sin cambios de color) */
 .table th.col-titulo, .table td.col-titulo { width: 200px; min-width: 150px; text-align: left; }
 .table th.col-estado, .table td.col-estado { width: 100px; text-align: center; }
 .table th.col-resumen, .table td.col-resumen { width: 200px; min-width: 150px; text-align: left; }
@@ -121,7 +110,6 @@
 .table th.col-palabras, .table td.col-palabras { width: 150px; min-width: 120px; text-align: center; }
 .table th.col-acciones, .table td.col-acciones { width: 120px; text-align: center; }
 
-/* --- Botones de Administración (Tabla) --- */
 .btn-admin {
     padding: 6px 10px;
     font-size: 0.8rem;
@@ -172,7 +160,6 @@
     color: var(--white-color);
 }
 
-/* --- Botones de Filtros --- */
 .btn-filter {
     background: var(--primary-color);
     color: var(--white-color);
@@ -199,7 +186,6 @@
     color: var(--white-color);
 }
 
-/* --- Badges y Contenido Auxiliar --- */
 .badge-status {
     padding: 5px 10px;
     border-radius: 12px;
@@ -244,7 +230,6 @@
     justify-content: center;
 }
 
-/* --- Utilidades y Textos --- */
 .centered-content { display: flex; align-items: center; justify-content: center; height: 100%; }
 .text-left { text-align: left !important; }
 .text-center { text-align: center !important; }
@@ -267,7 +252,6 @@
 }
 .btn-tiny { font-size: 0.90rem; cursor: pointer; }
 
-/* --- Modal Personalizado (Aplicable a todas las pantallas) --- */
 .modal-content {
     border-radius: 10px;
     border: none;
@@ -312,7 +296,6 @@
     padding: 20px;
 }
 
-/* .detail-item se modifica en mobile, pero aquí se define el estilo base para modal/desktop */
 .detail-item {
     margin-bottom: 15px;
     padding-bottom: 15px;
@@ -348,11 +331,6 @@
     line-height: 1.5;
 }
 
-/* ========================================================== */
-/* MEDIA QUERIES (RESPONSIVE) - CORREGIDO */
-/* ========================================================== */
-
-/* Versión Móvil: Máximo 768px (Tabletas en vertical y móviles) */
 @media (max-width: 768px) {
     .main-container {
         padding: 15px;
@@ -400,7 +378,6 @@
         margin-bottom: 15px;
     }
     
-    /* CORREGIDO: Estilos para tarjeta móvil */
     .detail-item {
         display: flex;
         flex-direction: column;
@@ -422,14 +399,12 @@
         font-weight: 500;
     }
     
-    /* CORREGIDO: Mantener cursor pointer para el resumen en móvil */
     .resumen-preview {
-        cursor: pointer; /* ¡IMPORTANTE! Esto faltaba */
+        cursor: pointer;
         font-size: 0.85rem;
         line-height: 1.5;
         color: var(--text-muted-color);
         margin-bottom: 15px;
-        /* Se eliminaron las propiedades que interferían con el modal */
     }
     
     .palabras-clave-container {
@@ -453,7 +428,6 @@
         justify-content: space-between;
     }
     
-    /* CORREGIDO: Botones Móviles con mejor tamaño táctil */
     .btn-mobile {
         flex: 1;
         padding: 12px 8px;
@@ -467,7 +441,7 @@
         gap: 6px;
         transition: all 0.3s ease;
         cursor: pointer;
-        min-height: 44px; /* Tamaño mínimo para touch */
+        min-height: 44px;
     }
     
     .btn-view-mobile {
@@ -523,9 +497,8 @@
         margin-top: 5px; 
     }
 
-    /* CORREGIDO: Mejoras para modal en móvil */
     .modal {
-        z-index: 1060 !important; /* Prioridad alta */
+        z-index: 1060 !important;
     }
     
     .modal-backdrop {
@@ -551,7 +524,7 @@
         padding: 15px;
         max-height: 70vh;
         overflow-y: auto;
-        -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
+        -webkit-overflow-scrolling: touch;
     }
     
     .resumen-completo { 
@@ -560,14 +533,12 @@
         font-size: 0.85rem; 
     }
     
-    /* Asegurar que los botones del modal sean táctiles */
     .modal-footer .btn {
         min-height: 44px;
         padding: 10px 15px;
     }
 }
 
-/* Versión Desktop: Mínimo 769px (Oculta tarjetas, muestra tabla) */
 @media (min-width: 769px) {
     .mobile-cards {
         display: none !important;
@@ -578,7 +549,6 @@
     }
 }
 
-/* Ajustes de Modal para pantallas muy pequeñas (Móvil muy pequeño) */
 @media (max-width: 576px) {
     .modal-dialog { 
         margin: 5px; 
