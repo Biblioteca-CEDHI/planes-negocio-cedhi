@@ -236,13 +236,13 @@ body, html {
   position: relative;
   bottom: 0;
   width: 100%;
-  background: rgba(20, 20, 20, 0.85); /* negro elegante con leve transparencia */
-  color: #f1f1f1; /* gris muy claro para contraste suave */
+  background: rgba(20, 20, 20, 0.85);
+  color: #f1f1f1;
   padding: 15px 0;
   text-align: center;
   font-size: 0.9rem;
-  box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.3); /* leve sombra superior */
-  backdrop-filter: blur(4px); /* efecto translúcido si el navegador lo soporta */
+  box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
   z-index: 10;
 }
 
