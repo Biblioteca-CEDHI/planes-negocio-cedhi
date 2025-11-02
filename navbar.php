@@ -50,7 +50,7 @@ function get_path($file) {
 
                 <?php if ($estaAutenticado): ?>
                     <li class="nav-item">
-                        <a class="nav-link" href="http://localhost/BibliotecaCEDHI/index.php">
+                        <a class="nav-link" href="http://bibliotecacedhi.infinityfreeapp.com/index.php">
                             <i class="fas fa-home"></i> Sistema Central
                         </a>
                     </li>

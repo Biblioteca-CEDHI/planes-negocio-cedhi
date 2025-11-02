@@ -14,9 +14,8 @@ function validarAutenticacionCentral() {
             $decoded = JWT::decode($token, new Key($key, 'HS256'));
             $userData = (array) $decoded;
 
-            // Reiniciar sesión anterior
-            //session_unset();
-
+            session_unset();
+            
             $_SESSION['user_id']             = $userData['userId'] ?? null;
             $_SESSION['user_email_address']  = $userData['email'] ?? null;
             $_SESSION['user_first_name']     = $userData['nombre'] ?? null;
@@ -27,7 +26,8 @@ function validarAutenticacionCentral() {
                 setcookie('auth_token', $token, [
                     'expires' => time() + 3600,
                     'path' => '/',
-                    'secure' => false, // cambiar a true si usas HTTPS
+                    'domain' => '.infinityfreeapp.com',
+                    'secure' => true,
                     'httponly' => true,
                     'samesite' => 'Lax'
                 ]);
