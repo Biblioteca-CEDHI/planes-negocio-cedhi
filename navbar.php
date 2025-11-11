@@ -24,12 +24,12 @@ function get_path($file) {
         <a class="navbar-brand" href="<?= get_path('index.php') ?>">
             <i class="fas fa-book-open"></i> Planes de Negocios
         </a>
-        
+
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
             aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
-        
+
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item">
@@ -43,26 +43,26 @@ function get_path($file) {
                 </li>
 
                 <?php if ($estaAutenticado && ($rol == 'admin' || $rol == 'owner')): ?>
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?= get_path('Admin/gestionar_tesis.php') ?>">Gestionar Planes</a>
-                    </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?= get_path('Admin/gestionar_tesis.php') ?>">Gestionar Planes</a>
+                </li>
                 <?php endif; ?>
 
                 <?php if ($estaAutenticado): ?>
-                    <li class="nav-item">
-                        <a class="nav-link" href="http://bibliotecacedhi.infinityfreeapp.com/index.php">
-                            <i class="fas fa-home"></i> Sistema Central
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <span class="nav-link text-warning">
-                            <i class="fas fa-user"></i> <?= htmlspecialchars($usuarioData['nombre'] ?? 'Usuario') ?>
-                        </span>
-                    </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="http://localhost/BibliotecaCEDHI/index.php">
+                        <i class="fas fa-home"></i> Sistema Central
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <span class="nav-link text-warning">
+                        <i class="fas fa-user"></i> <?= htmlspecialchars($usuarioData['nombre'] ?? 'Usuario') ?>
+                    </span>
+                </li>
                 <?php else: ?>
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?= get_path('Accesos/login.php') ?>">Iniciar sesión</a>
-                    </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?= get_path('Accesos/login.php') ?>">Iniciar sesión</a>
+                </li>
                 <?php endif; ?>
             </ul>
         </div>

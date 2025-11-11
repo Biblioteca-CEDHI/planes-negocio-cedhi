@@ -10,7 +10,7 @@ if (session_status() === PHP_SESSION_NONE) {
 include_once "../Accesos/auth_central.php";
 
 if (!validarAutenticacionCentral()) {
-    header("Location: https://bibliotecacedhi.infinityfreeapp.com/");
+    header("Location: http://localhost/BibliotecaCEDHI/");
     exit();
 }
 
@@ -19,7 +19,7 @@ $rol = strtolower($usuarioData['rol']);
 $estaAutenticado = true;
 
 if ($rol !== 'admin' && $rol !== 'owner') {
-    header("Location: https://bibliotecacedhi.infinityfreeapp.com/?error=permisos");
+    header("Location: http://localhost/BibliotecaCEDHI/?error=permisos");
     exit();
 }
 
