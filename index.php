@@ -31,23 +31,19 @@ $result_busquedas = $conn->query($sql_busquedas);
 ?>
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Repositorio de Planes de Negocios</title>
-    <link rel="icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQradELIH2EABbwe93oJ0s--V91loD8gTe0jg&s" type="image/png">
-
-    <!-- Bootstrap CSS -->
+    <link rel="icon" type="image/png" href="Imagenes/logo_cedhi_claro.png" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="estilos.css">
 </head>
+
 <body>
     <?php include_once 'navbar.php'; ?>
 
@@ -66,7 +62,8 @@ $result_busquedas = $conn->query($sql_busquedas);
             <p class="hero-subtitle">Encuentra investigaciones académicas y planes de negocio completos</p>
 
             <div class="search-container" style="position: relative;">
-                <form class="search-form" id="search-form" action="Buscar/busqueda_palabra.php" method="GET" autocomplete="off">
+                <form class="search-form" id="search-form" action="Buscar/busqueda_palabra.php" method="GET"
+                    autocomplete="off">
                     <input type="text" class="search-input" id="searchparam" name="searchparam"
                         placeholder="Buscar por título, autor o palabras clave..."
                         value="<?= htmlspecialchars($searchparam) ?>" />
@@ -82,10 +79,11 @@ $result_busquedas = $conn->query($sql_busquedas);
                 <h3><i class="fas fa-fire"></i> Tendencias de búsqueda</h3>
                 <div class="search-tags">
                     <?php while ($row = $result_busquedas->fetch_assoc()): ?>
-                        <div class="search-tag" role="button" tabindex="0" onclick="fillAndSearch('<?= htmlspecialchars($row['palabra'], ENT_QUOTES) ?>')">
-                            <?= htmlspecialchars(ucwords($row['palabra'])) ?>
-                            <span class="count"><?= $row['contador'] ?></span>
-                        </div>
+                    <div class="search-tag" role="button" tabindex="0"
+                        onclick="fillAndSearch('<?= htmlspecialchars($row['palabra'], ENT_QUOTES) ?>')">
+                        <?= htmlspecialchars(ucwords($row['palabra'])) ?>
+                        <span class="count"><?= $row['contador'] ?></span>
+                    </div>
                     <?php endwhile; ?>
                 </div>
             </div>
@@ -104,41 +102,42 @@ $result_busquedas = $conn->query($sql_busquedas);
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        (function () {
-            let currentIndex = 0;
-            const images = document.querySelectorAll('.carousel img');
-            if (!images.length) return;
-            const totalImages = images.length;
+    (function() {
+        let currentIndex = 0;
+        const images = document.querySelectorAll('.carousel img');
+        if (!images.length) return;
+        const totalImages = images.length;
 
-            function showNextImage() {
-                images[currentIndex].classList.remove('active');
-                currentIndex = (currentIndex + 1) % totalImages;
-                images[currentIndex].classList.add('active');
-            }
-            setInterval(showNextImage, 5000);
-        })();
-
-        (function () {
-            const heroTitle = document.querySelector('.hero-title');
-            if (!heroTitle) return;
-            const originalText = heroTitle.textContent;
-            heroTitle.textContent = '';
-            let i = 0;
-            const typingEffect = setInterval(() => {
-                if (i < originalText.length) {
-                    heroTitle.textContent += originalText.charAt(i);
-                    i++;
-                } else {
-                    clearInterval(typingEffect);
-                }
-            }, 40);
-        })();
-
-        function fillAndSearch(value) {
-            const input = document.getElementById('searchparam');
-            input.value = value;
-            document.getElementById('search-form').submit();
+        function showNextImage() {
+            images[currentIndex].classList.remove('active');
+            currentIndex = (currentIndex + 1) % totalImages;
+            images[currentIndex].classList.add('active');
         }
+        setInterval(showNextImage, 5000);
+    })();
+
+    (function() {
+        const heroTitle = document.querySelector('.hero-title');
+        if (!heroTitle) return;
+        const originalText = heroTitle.textContent;
+        heroTitle.textContent = '';
+        let i = 0;
+        const typingEffect = setInterval(() => {
+            if (i < originalText.length) {
+                heroTitle.textContent += originalText.charAt(i);
+                i++;
+            } else {
+                clearInterval(typingEffect);
+            }
+        }, 40);
+    })();
+
+    function fillAndSearch(value) {
+        const input = document.getElementById('searchparam');
+        input.value = value;
+        document.getElementById('search-form').submit();
+    }
     </script>
 </body>
+
 </html>

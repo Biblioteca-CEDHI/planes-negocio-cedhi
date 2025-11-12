@@ -124,155 +124,160 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ingresar Plan de Negocios - Panel de Administración</title>
-    
-    <link rel="icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQradELIH2EABbwe93oJ0s--V91loD8gTe0jg&s" type="image/png">
+
+    <link rel="icon" type="image/png" href="../Imagenes/logo_cedhi_claro.png" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
     <link rel="stylesheet" href="../estilos.css">
-    
+
     <style>
-        .main-container {
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 5px 25px rgba(0,0,0,0.05);
-            padding: 30px;
-            margin-bottom: 40px;
-        }
-        
-        .admin-header {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            border-radius: 10px;
-            padding: 25px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-        
-        .user-info {
-            background: var(--light-color);
-            padding: 15px 20px;
-            border-radius: 8px;
-            margin-bottom: 25px;
-            border-left: 4px solid var(--accent-color);
-        }
-        
-        .admin-badge {
-            background-color: var(--primary-color);
-            color: white;
-            padding: 5px 12px;
-            border-radius: 15px;
-            font-size: 0.8rem;
-            font-weight: bold;
-        }
-        
-        .owner-badge {
-            background-color: var(--accent-color);
-            color: var(--dark-color);
-            padding: 5px 12px;
-            border-radius: 15px;
-            font-size: 0.8rem;
-            font-weight: bold;
-        }
-        
+    .main-container {
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 5px 25px rgba(0, 0, 0, 0.05);
+        padding: 30px;
+        margin-bottom: 40px;
+    }
+
+    .admin-header {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        border-radius: 10px;
+        padding: 25px;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .user-info {
+        background: var(--light-color);
+        padding: 15px 20px;
+        border-radius: 8px;
+        margin-bottom: 25px;
+        border-left: 4px solid var(--accent-color);
+    }
+
+    .admin-badge {
+        background-color: var(--primary-color);
+        color: white;
+        padding: 5px 12px;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+
+    .owner-badge {
+        background-color: var(--accent-color);
+        color: var(--dark-color);
+        padding: 5px 12px;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+
+    .form-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: var(--dark-color);
+        margin-bottom: 8px;
+    }
+
+    .form-control,
+    .form-select {
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        padding: 12px 15px;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.25rem rgba(106, 27, 154, 0.25);
+    }
+
+    .form-text {
+        color: #6c757d;
+        font-size: 0.85rem;
+    }
+
+    .btn-submit {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        border: none;
+        color: white;
+        padding: 12px 30px;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(106, 27, 154, 0.3);
+    }
+
+    .btn-cancel {
+        background: #6c757d;
+        border: none;
+        color: white;
+        padding: 12px 30px;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-cancel:hover {
+        background: #5a6268;
+        transform: translateY(-2px);
+    }
+
+    .required-field::after {
+        content: " *";
+        color: #dc3545;
+    }
+
+    .form-section {
+        background: var(--light-color);
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 25px;
+        border-left: 4px solid var(--accent-color);
+    }
+
+    .form-section-title {
+        color: var(--primary-color);
+        font-weight: 600;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #eee;
+    }
+
+    @media (max-width: 768px) {
         .form-container {
-            max-width: 800px;
-            margin: 0 auto;
+            padding: 0 15px;
         }
-        
-        .form-label {
-            font-weight: 600;
-            color: var(--dark-color);
-            margin-bottom: 8px;
+
+        .btn-group {
+            width: 100%;
         }
-        
-        .form-control, .form-select {
-            border-radius: 8px;
-            border: 1px solid #ddd;
-            padding: 12px 15px;
-            transition: all 0.3s ease;
-        }
-        
-        .form-control:focus, .form-select:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 0.25rem rgba(106, 27, 154, 0.25);
-        }
-        
-        .form-text {
-            color: #6c757d;
-            font-size: 0.85rem;
-        }
-        
-        .btn-submit {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            border: none;
-            color: white;
-            padding: 12px 30px;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-submit:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(106, 27, 154, 0.3);
-        }
-        
+
+        .btn-submit,
         .btn-cancel {
-            background: #6c757d;
-            border: none;
-            color: white;
-            padding: 12px 30px;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: all 0.3s ease;
+            width: 100%;
+            margin-bottom: 10px;
         }
-        
-        .btn-cancel:hover {
-            background: #5a6268;
-            transform: translateY(-2px);
-        }
-        
-        .required-field::after {
-            content: " *";
-            color: #dc3545;
-        }
-        
-        .form-section {
-            background: var(--light-color);
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 25px;
-            border-left: 4px solid var(--accent-color);
-        }
-        
-        .form-section-title {
-            color: var(--primary-color);
-            font-weight: 600;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #eee;
-        }
-        
-        @media (max-width: 768px) {
-            .form-container {
-                padding: 0 15px;
-            }
-            
-            .btn-group {
-                width: 100%;
-            }
-            
-            .btn-submit, .btn-cancel {
-                width: 100%;
-                margin-bottom: 10px;
-            }
-        }
+    }
     </style>
 </head>
 
@@ -302,34 +307,34 @@ function toggleNuevaCarrera(selectElement) {
         </div>
         <div class="form-container">
             <form method="POST" enctype="multipart/form-data">
-                
+
                 <div class="form-section">
                     <h4 class="form-section-title">
                         <i class="fas fa-info-circle"></i> Información Básica
                     </h4>
-                    
+
                     <div class="mb-4">
                         <label for="titulo" class="form-label required-field">
                             <i class="fas fa-heading"></i> Título del Plan
                         </label>
-                        <input type="text" class="form-control" id="titulo" name="titulo" required 
-                               placeholder="Ingrese el título completo del plan de negocio">
+                        <input type="text" class="form-control" id="titulo" name="titulo" required
+                            placeholder="Ingrese el título completo del plan de negocio">
                     </div>
 
                     <div class="mb-4">
                         <label for="autor" class="form-label required-field">
                             <i class="fas fa-user"></i> Autor(es)
                         </label>
-                        <input type="text" class="form-control" id="autor" name="autor" required 
-                               placeholder="Nombre del autor o autores">
+                        <input type="text" class="form-control" id="autor" name="autor" required
+                            placeholder="Nombre del autor o autores">
                     </div>
 
                     <div class="mb-4">
                         <label for="resumen" class="form-label required-field">
                             <i class="fas fa-file-alt"></i> Resumen Ejecutivo
                         </label>
-                        <textarea class="form-control" id="resumen" name="resumen" rows="5" required 
-                                  placeholder="Describa brevemente el plan de negocio, objetivos principales, mercado objetivo, etc..."></textarea>
+                        <textarea class="form-control" id="resumen" name="resumen" rows="5" required
+                            placeholder="Describa brevemente el plan de negocio, objetivos principales, mercado objetivo, etc..."></textarea>
                     </div>
                 </div>
 
@@ -337,7 +342,7 @@ function toggleNuevaCarrera(selectElement) {
                     <h4 class="form-section-title">
                         <i class="fas fa-cog"></i> Detalles del Plan
                     </h4>
-                    
+
                     <div class="row">
                         <div class="col-md-6 mb-4">
                             <label for="estado" class="form-label required-field">
@@ -355,8 +360,8 @@ function toggleNuevaCarrera(selectElement) {
                             <label for="fecha_publicacion" class="form-label required-field">
                                 <i class="fas fa-calendar-alt"></i> Año de Publicación
                             </label>
-                            <input type="number" class="form-control" id="fecha_publicacion" name="fecha_publicacion" 
-                                   min="2000" max="<?= date('Y') ?>" value="<?= date('Y') ?>" required>
+                            <input type="number" class="form-control" id="fecha_publicacion" name="fecha_publicacion"
+                                min="2000" max="<?= date('Y') ?>" value="<?= date('Y') ?>" required>
                         </div>
                     </div>
 
@@ -364,12 +369,13 @@ function toggleNuevaCarrera(selectElement) {
                         <label for="carrera_id" class="form-label required-field">
                             <i class="fas fa-graduation-cap"></i> Carrera
                         </label>
-                        <select class="form-select" id="carrera_id" name="carrera_id" required onchange="toggleNuevaCarrera(this)">
+                        <select class="form-select" id="carrera_id" name="carrera_id" required
+                            onchange="toggleNuevaCarrera(this)">
                             <option value="">-- Selecciona una carrera --</option>
                             <?php 
                             $resultCarreras->data_seek(0);
                             while ($row = $resultCarreras->fetch_assoc()): ?>
-                                <option value="<?= $row['ID'] ?>"><?= htmlspecialchars($row['Nombre']) ?></option>
+                            <option value="<?= $row['ID'] ?>"><?= htmlspecialchars($row['Nombre']) ?></option>
                             <?php endwhile; ?>
                             <option value="otra">Otra (Agregar nueva carrera)</option>
                         </select>
@@ -379,8 +385,8 @@ function toggleNuevaCarrera(selectElement) {
                         <label for="nueva_carrera" class="form-label">
                             <i class="fas fa-plus"></i> Nombre de la nueva carrera
                         </label>
-                        <input type="text" class="form-control" id="nueva_carrera" name="nueva_carrera" 
-                               placeholder="Ingrese el nombre de la nueva carrera">
+                        <input type="text" class="form-control" id="nueva_carrera" name="nueva_carrera"
+                            placeholder="Ingrese el nombre de la nueva carrera">
                     </div>
                 </div>
 
@@ -388,13 +394,13 @@ function toggleNuevaCarrera(selectElement) {
                     <h4 class="form-section-title">
                         <i class="fas fa-file-upload"></i> Archivos y Metadatos
                     </h4>
-                    
+
                     <div class="mb-4">
                         <label for="archivo_pdf" class="form-label required-field">
                             <i class="fas fa-file-pdf"></i> Archivo PDF
                         </label>
-                        <input type="file" class="form-control" id="archivo_pdf" name="archivo_pdf" 
-                               accept=".pdf" required>
+                        <input type="file" class="form-control" id="archivo_pdf" name="archivo_pdf" accept=".pdf"
+                            required>
                         <div class="form-text">
                             <i class="fas fa-info-circle"></i> Solo se permiten archivos PDF. Tamaño máximo: 10MB
                         </div>
@@ -404,10 +410,11 @@ function toggleNuevaCarrera(selectElement) {
                         <label for="palabras_clave" class="form-label required-field">
                             <i class="fas fa-tags"></i> Palabras Clave
                         </label>
-                        <input type="text" class="form-control" id="palabras_clave" name="palabras_clave" required 
-                               placeholder="Ej: marketing, finanzas, emprendimiento, innovación, startup...">
+                        <input type="text" class="form-control" id="palabras_clave" name="palabras_clave" required
+                            placeholder="Ej: marketing, finanzas, emprendimiento, innovación, startup...">
                         <div class="form-text">
-                            <i class="fas fa-lightbulb"></i> Separe las palabras clave con comas. Estas ayudarán a los usuarios a encontrar el plan.
+                            <i class="fas fa-lightbulb"></i> Separe las palabras clave con comas. Estas ayudarán a los
+                            usuarios a encontrar el plan.
                         </div>
                     </div>
                 </div>
@@ -432,4 +439,5 @@ function toggleNuevaCarrera(selectElement) {
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
+
 </html>
