@@ -14,7 +14,7 @@ function validarAutenticacionCentral() {
             $decoded = JWT::decode($token, new Key($key, 'HS256'));
             $userData = (array) $decoded;
 
-            session_unset();
+            //session_unset();
             
             $_SESSION['user_id']             = $userData['userId'] ?? null;
             $_SESSION['user_email_address']  = $userData['email'] ?? null;
